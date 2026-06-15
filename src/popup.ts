@@ -282,10 +282,13 @@ export function showPopupAt(
     activeDocument.body.appendChild(dom);
 
     // Measure then position with flip + viewport clamp.
+    // Use activeWindow (not window) so the popout window's viewport is used —
+    // matches activeDocument.body above, else popup mis-positions in popouts.
     const rect = dom.getBoundingClientRect();
     const margin = 12;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const win = activeDocument.defaultView ?? window;
+    const vw = win.innerWidth;
+    const vh = win.innerHeight;
 
     let left = x + margin;
     let top = y + margin;
@@ -312,12 +315,12 @@ export function showPopupAt(
 
     activeDocument.addEventListener("keydown", onKey, true);
     activeDocument.addEventListener("mousedown", onClick, true);
-    window.addEventListener("scroll", onScroll, true);
+    win.addEventListener("scroll", onScroll, true);
 
     cleanup = () => {
         activeDocument.removeEventListener("keydown", onKey, true);
         activeDocument.removeEventListener("mousedown", onClick, true);
-        window.removeEventListener("scroll", onScroll, true);
+        win.removeEventListener("scroll", onScroll, true);
     };
 }
 

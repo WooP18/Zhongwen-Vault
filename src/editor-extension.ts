@@ -77,8 +77,9 @@ function highlightPlugin(provider: ZhongwenProvider) {
                 if (pos == null) return this.clear();
 
                 // Quick char-code check before paying for full doc serialization.
+                // 0x25cb (○) is below 0x3400 but is a valid char (see isChineseChar).
                 const charCode = this.view.state.doc.sliceString(pos, pos + 1).charCodeAt(0);
-                if (isNaN(charCode) || charCode < 0x3400) return this.clear();
+                if (isNaN(charCode) || (charCode < 0x3400 && charCode !== 0x25cb)) return this.clear();
 
                 const doc = this.view.state.doc.toString();
                 const seg = segmentAtPos(dict, doc, pos);
@@ -112,9 +113,10 @@ function hoverExtension(provider: ZhongwenProvider) {
             const dict = provider.getDict();
             if (!dict) return null;
 
-            // Cheap check before full serialization.
+            // Cheap check before full serialization. 0x25cb (○) is below 0x3400
+            // but valid (see isChineseChar).
             const charCode = view.state.doc.sliceString(pos, pos + 1).charCodeAt(0);
-            if (isNaN(charCode) || charCode < 0x3400) return null;
+            if (isNaN(charCode) || (charCode < 0x3400 && charCode !== 0x25cb)) return null;
 
             const doc = view.state.doc.toString();
             const seg = segmentAtPos(dict, doc, pos);

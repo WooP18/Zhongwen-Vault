@@ -1,7 +1,7 @@
 {
   "id": "zhongwen-vault",
   "name": "Zhongwen Vault",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.4.0",
   "description": "Hover over Chinese text to see tone-colored pinyin and CC-CEDICT definitions. Inspired by the Zhongwen browser extension.",
   "author": "WooP18",

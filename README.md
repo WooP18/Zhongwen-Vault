@@ -2,6 +2,8 @@
 
 **Made by [WooP18](https://github.com/WooP18)**
 
+<a href='https://ko-fi.com/B8O521GOSZ' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi6.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+
 Hover over Chinese text anywhere in Obsidian (editor or reading view) to see a
 floating card with pinyin (tone-colored), CC-CEDICT definitions, and a save
 shortcut.

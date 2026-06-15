@@ -116,7 +116,8 @@ export class ZhongwenDictionary {
 
             for (let j = 1; j < ix.length; ++j) {
                 const offset = parseInt(ix[j], 10);
-                const line = dict.substring(offset, dict.indexOf("\n", offset));
+                const nl = dict.indexOf("\n", offset);
+                const line = dict.substring(offset, nl === -1 ? undefined : nl);
 
                 if (count >= maxTrim) {
                     more = true;
@@ -139,11 +140,3 @@ export class ZhongwenDictionary {
     }
 }
 
-/**
- * Convenience wrapper: look up a string and return the best (longest) entry.
- */
-export function lookupBest(dict: ZhongwenDictionary, text: string): DictEntry | null {
-    const result = dict.wordSearch(text);
-    if (!result || result.entries.length === 0) return null;
-    return result.entries[0];
-}

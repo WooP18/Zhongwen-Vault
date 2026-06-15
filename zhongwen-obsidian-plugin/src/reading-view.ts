@@ -44,6 +44,8 @@ function offsetAtPoint(textNode: Node, x: number, y: number): number {
 
 export function makeReadingProcessor(provider: ReadingProvider) {
     return (el: HTMLElement, _ctx: MarkdownPostProcessorContext) => {
+        // Per-panel state: isolated so multiple reading panels don't interfere.
+        const panelState: { activeKey: string | null } = { activeKey: null };
         const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
         const textNodes: Text[] = [];
         let node: Node | null;
@@ -73,7 +75,7 @@ export function makeReadingProcessor(provider: ReadingProvider) {
                 const span = document.createElement("span");
                 span.className = "zhongwen-hoverable";
                 span.textContent = match[0];
-                attachHover(span, provider);
+                attachHover(span, provider, panelState);
                 frag.appendChild(span);
                 lastIndex = CHINESE_RUN.lastIndex;
             }
@@ -85,14 +87,15 @@ export function makeReadingProcessor(provider: ReadingProvider) {
     };
 }
 
-// Key of the segment currently shown, to skip redundant rebuilds on mousemove.
-let activeKey: string | null = null;
-
-function attachHover(span: HTMLSpanElement, provider: ReadingProvider): void {
+function attachHover(
+    span: HTMLSpanElement,
+    provider: ReadingProvider,
+    panelState: { activeKey: string | null }
+): void {
     const show = (e: MouseEvent) => {
         const dict = provider.getDict();
         if (!dict) {
-            activeKey = null;
+            panelState.activeKey = null;
             return;
         }
         const inner = span.firstChild;
@@ -105,18 +108,18 @@ function attachHover(span: HTMLSpanElement, provider: ReadingProvider): void {
         }
         const seg = segmentAtPos(dict, runText, pos);
         if (!seg) {
-            activeKey = null;
+            panelState.activeKey = null;
             destroyPopup();
             return;
         }
 
         // Same word still under cursor → nothing to redo (no flicker).
         const key = `${seg.start}:${seg.end}:${seg.word}`;
-        if (key === activeKey) return;
-        activeKey = key;
+        if (key === panelState.activeKey) return;
+        panelState.activeKey = key;
 
         // Popup first (it tears down any previous popup + highlight)...
-        showPopupAt(seg.entry, e.clientX, e.clientY, provider.getOptions());
+        showPopupAt(seg.entries, e.clientX, e.clientY, provider.getOptions());
 
         // ...then highlight just the matched characters via a Range over the run.
         if (inner) {
@@ -138,7 +141,7 @@ function attachHover(span: HTMLSpanElement, provider: ReadingProvider): void {
         // Don't close if the cursor moved onto the popup itself.
         const to = e.relatedTarget as HTMLElement | null;
         if (to && to.closest(".zhongwen-popup")) return;
-        activeKey = null;
+        panelState.activeKey = null;
         destroyPopup();
     });
 }

@@ -96,7 +96,8 @@ var ZhongwenDictionary = class _ZhongwenDictionary {
         }
         for (let j = 1; j < ix.length; ++j) {
           const offset = parseInt(ix[j], 10);
-          const line = dict.substring(offset, dict.indexOf("\n", offset));
+          const nl = dict.indexOf("\n", offset);
+          const line = dict.substring(offset, nl === -1 ? void 0 : nl);
           if (count >= maxTrim) {
             more = true;
             break outer;
@@ -116,46 +117,6 @@ var ZhongwenDictionary = class _ZhongwenDictionary {
     return { entries, matchLen: maxLen, more };
   }
 };
-
-// src/editor-extension.ts
-var import_view = require("@codemirror/view");
-
-// src/segmenter.ts
-var MAX_WORD_LEN = 7;
-function isChineseChar(cp) {
-  return cp === 9675 || // ○
-  13312 <= cp && cp <= 40959 || // CJK + Ext A
-  63744 <= cp && cp <= 64255 || // CJK Compatibility Ideographs
-  65313 <= cp && cp <= 65338 || // fullwidth A-Z
-  65345 <= cp && cp <= 65370 || // fullwidth a-z
-  55296 <= cp && cp <= 57343;
-}
-function chineseWindowAt(text, pos) {
-  if (pos < 0 || pos >= text.length)
-    return "";
-  if (!isChineseChar(text.charCodeAt(pos)))
-    return "";
-  let end = pos;
-  while (end < text.length && end - pos < MAX_WORD_LEN && isChineseChar(text.charCodeAt(end))) {
-    end++;
-  }
-  return text.slice(pos, end);
-}
-function segmentAtPos(dict, text, pos) {
-  const window2 = chineseWindowAt(text, pos);
-  if (!window2)
-    return null;
-  const result = dict.wordSearch(window2);
-  if (!result || result.entries.length === 0)
-    return null;
-  const matchLen = result.matchLen || 1;
-  return {
-    word: window2.slice(0, matchLen),
-    entry: result.entries[0],
-    start: pos,
-    end: pos + matchLen
-  };
-}
 
 // src/pinyin.ts
 var COMBINING = {
@@ -200,7 +161,7 @@ function tonify(vowels, tone) {
 }
 function toPinyinSyllables(syllables) {
   const out = [];
-  const parts = syllables.split(/[\s·]+/);
+  const parts = syllables.replace(/([1-5])(?=[a-zA-Zü:])/g, "$1 ").split(/[\s·]+/);
   for (const syllable of parts) {
     if (!syllable)
       continue;
@@ -226,15 +187,156 @@ function toPinyinSyllables(syllables) {
   }
   return out;
 }
+function toPinyinText(syllables) {
+  return toPinyinSyllables(syllables).map((s) => s.text).join(" ").replace(/\s+,/g, " ,");
+}
+
+// src/editor-extension.ts
+var import_view = require("@codemirror/view");
+var import_state = require("@codemirror/state");
+
+// src/segmenter.ts
+var MAX_WORD_LEN = 7;
+function isChineseChar(cp) {
+  return cp === 9675 || // ○
+  13312 <= cp && cp <= 40959 || // CJK + Ext A
+  63744 <= cp && cp <= 64255 || // CJK Compatibility Ideographs
+  65313 <= cp && cp <= 65338 || // fullwidth A-Z
+  65345 <= cp && cp <= 65370 || // fullwidth a-z
+  55296 <= cp && cp <= 57343;
+}
+function chineseWindowAt(text, pos) {
+  if (pos < 0 || pos >= text.length)
+    return "";
+  if (!isChineseChar(text.charCodeAt(pos)))
+    return "";
+  let end = pos;
+  while (end < text.length && end - pos < MAX_WORD_LEN && isChineseChar(text.charCodeAt(end))) {
+    end++;
+  }
+  return text.slice(pos, end);
+}
+function segmentAtPos(dict, text, pos) {
+  const window2 = chineseWindowAt(text, pos);
+  if (!window2)
+    return null;
+  const result = dict.wordSearch(window2);
+  if (!result || result.entries.length === 0)
+    return null;
+  const matchLen = result.matchLen || 1;
+  const entries = result.entries.filter((e) => e.match.length === matchLen);
+  if (entries.length === 0)
+    return null;
+  return {
+    word: window2.slice(0, matchLen),
+    entries,
+    start: pos,
+    end: pos + matchLen
+  };
+}
 
 // src/popup.ts
 function charCount(s) {
   return Array.from(s).length;
 }
-function renderPopupDom(entry, opts) {
+var REGISTER_TAGS = /* @__PURE__ */ new Set([
+  "idiom",
+  "coll.",
+  "fig.",
+  "lit.",
+  "old",
+  "dialect",
+  "slang",
+  "vulgar",
+  "derog.",
+  "honorific",
+  "polite",
+  "formal",
+  "archaic",
+  "abbr.",
+  "onom.",
+  "neologism",
+  "euphemism",
+  "loanword",
+  "surname",
+  "math.",
+  "phys.",
+  "chem.",
+  "bio.",
+  "med.",
+  "comp.",
+  "electr.",
+  "mus.",
+  "ling.",
+  "gram.",
+  "astron.",
+  "geol.",
+  "econ.",
+  "law",
+  "tw",
+  "prc",
+  "hk"
+]);
+var REF_RE = /([㐀-鿿豈-﫿·|]+)?\[([A-Za-z0-9:·,\s]+)\]/g;
+function appendPinyin(parent, raw, leadingSpace) {
+  const syls = toPinyinSyllables(raw);
+  syls.forEach((syl, i) => {
+    var _a;
+    const span = parent.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
+    span.setText((leadingSpace || i > 0 ? " " : "") + syl.text);
+    span.style.color = (_a = TONE_COLOR_VARS[syl.tone]) != null ? _a : "var(--text-normal)";
+  });
+}
+function renderInlineRefs(parent, text) {
+  REF_RE.lastIndex = 0;
+  let last = 0;
+  let m;
+  while ((m = REF_RE.exec(text)) !== null) {
+    if (m.index > last)
+      parent.appendText(text.slice(last, m.index));
+    const ref = parent.createSpan({ cls: "zhongwen-ref" });
+    if (m[1]) {
+      const forms = m[1].split("|");
+      ref.createSpan({
+        cls: "zhongwen-ref-hanzi",
+        text: forms[forms.length - 1]
+      });
+      appendPinyin(ref, m[2], true);
+    } else {
+      appendPinyin(ref, m[2], false);
+    }
+    last = REF_RE.lastIndex;
+  }
+  if (last < text.length)
+    parent.appendText(text.slice(last));
+}
+function renderDefinitionInto(row, text) {
+  let rest = text;
+  let m;
+  while ((m = rest.match(/^\(([^)]+)\)\s*/)) !== null) {
+    const inner = m[1];
+    const first = inner.split(/[\s;,]/)[0].toLowerCase();
+    if (REGISTER_TAGS.has(first)) {
+      row.createSpan({ cls: "zhongwen-tag", text: inner });
+      rest = rest.slice(m[0].length);
+    } else
+      break;
+  }
+  renderInlineRefs(row, rest);
+}
+function parseClassifiers(s) {
+  const out = [];
+  for (const part of s.split(",")) {
+    const m = part.trim().match(/^([^\[]+)\[([^\]]+)\]$/);
+    if (!m)
+      continue;
+    const forms = m[1].split("|");
+    out.push({ hanzi: forms[forms.length - 1], pinyin: m[2] });
+  }
+  return out;
+}
+function renderEntryBlock(root, entry, opts) {
   var _a;
-  const root = document.createElement("div");
-  root.className = "zhongwen-popup";
   const header = root.createDiv({ cls: "zhongwen-popup-header" });
   const hanzi = header.createSpan({ cls: "zhongwen-popup-character" });
   hanzi.setText(entry.simplified);
@@ -249,16 +351,57 @@ function renderPopupDom(entry, opts) {
     span.style.color = (_a = TONE_COLOR_VARS[syl.tone]) != null ? _a : "var(--text-normal)";
   }
   root.createDiv({ cls: "zhongwen-popup-separator" });
-  const defs = entry.definitions.slice(0, 5);
+  const senses = [];
+  const classifiers = [];
+  for (const def of entry.definitions) {
+    if (def.startsWith("CL:")) {
+      classifiers.push(...parseClassifiers(def.slice(3)));
+    } else {
+      const parts = def.split(/;\s+(?![^(]*\))/);
+      for (const p of parts) {
+        const trimmed = p.trim();
+        if (trimmed)
+          senses.push(trimmed);
+      }
+    }
+  }
+  const defs = senses.slice(0, 5);
   defs.forEach((def, i) => {
     const row = root.createDiv({ cls: "zhongwen-popup-definition" });
     if (defs.length > 1) {
       row.createSpan({ cls: "zhongwen-popup-definition-number", text: `${i + 1}.` });
     }
-    row.createSpan({ text: def });
+    renderDefinitionInto(row, def);
+  });
+  if (classifiers.length) {
+    const row = root.createDiv({ cls: "zhongwen-popup-measure" });
+    row.createSpan({ cls: "zhongwen-popup-measure-label", text: "measure word" });
+    classifiers.forEach((cl, i) => {
+      var _a2;
+      const item = row.createSpan({ cls: "zhongwen-popup-measure-item" });
+      if (i > 0)
+        item.setText(", ");
+      item.createSpan({ cls: "zhongwen-popup-measure-hanzi", text: cl.hanzi });
+      const py = toPinyinSyllables(cl.pinyin);
+      for (const syl of py) {
+        const span = item.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
+        span.setText(" " + syl.text);
+        span.style.color = (_a2 = TONE_COLOR_VARS[syl.tone]) != null ? _a2 : "var(--text-normal)";
+      }
+    });
+  }
+}
+function renderPopupDom(entries, opts) {
+  const root = document.createElement("div");
+  root.className = "zhongwen-popup";
+  entries.forEach((entry, i) => {
+    if (i > 0) {
+      root.createDiv({ cls: "zhongwen-popup-entry-sep" });
+    }
+    renderEntryBlock(root, entry, opts);
   });
   if (opts.showHSKLevel) {
-    const n = charCount(entry.simplified);
+    const n = charCount(entries[0].simplified);
     root.createDiv({
       cls: "zhongwen-popup-meta",
       text: `${n} character${n === 1 ? "" : "s"}`
@@ -311,9 +454,9 @@ function destroyPopup() {
   hideHighlight();
   currentEntry = null;
 }
-function showPopupAt(entry, x, y, opts) {
+function showPopupAt(entries, x, y, opts) {
   destroyPopup();
-  const dom = renderPopupDom(entry, opts);
+  const dom = renderPopupDom(entries, opts);
   dom.style.position = "fixed";
   dom.style.visibility = "hidden";
   document.body.appendChild(dom);
@@ -333,7 +476,7 @@ function showPopupAt(entry, x, y, opts) {
   dom.style.top = `${top}px`;
   dom.style.visibility = "visible";
   currentPopup = dom;
-  currentEntry = entry;
+  currentEntry = entries[0];
   const onKey = (e) => {
     if (e.key === "Escape")
       destroyPopup();
@@ -368,11 +511,75 @@ function showSaveFeedback() {
 }
 
 // src/editor-extension.ts
-function zhongwenEditorExtension(provider) {
+var setHighlight = import_state.StateEffect.define();
+var highlightMark = import_view.Decoration.mark({ class: "zhongwen-editor-highlight" });
+var highlightField = import_state.StateField.define({
+  create() {
+    return import_view.Decoration.none;
+  },
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(setHighlight)) {
+        deco = e.value ? import_view.Decoration.set([highlightMark.range(e.value.from, e.value.to)]) : import_view.Decoration.none;
+      }
+    }
+    return deco;
+  },
+  provide: (f) => import_view.EditorView.decorations.from(f)
+});
+function highlightPlugin(provider) {
+  return import_view.ViewPlugin.fromClass(
+    class {
+      constructor(view) {
+        this.current = null;
+        this.view = view;
+        this.onMove = (e) => this.handleMove(e);
+        this.onLeave = () => this.clear();
+        view.dom.addEventListener("mousemove", this.onMove);
+        view.dom.addEventListener("mouseleave", this.onLeave);
+      }
+      handleMove(e) {
+        const dict = provider.getDict();
+        if (!dict)
+          return this.clear();
+        const pos = this.view.posAtCoords({ x: e.clientX, y: e.clientY });
+        if (pos == null)
+          return this.clear();
+        const charCode = this.view.state.doc.sliceString(pos, pos + 1).charCodeAt(0);
+        if (isNaN(charCode) || charCode < 13312)
+          return this.clear();
+        const doc = this.view.state.doc.toString();
+        const seg = segmentAtPos(dict, doc, pos);
+        if (!seg)
+          return this.clear();
+        const key = `${seg.start}:${seg.end}`;
+        if (key === this.current)
+          return;
+        this.current = key;
+        this.view.dispatch({ effects: setHighlight.of({ from: seg.start, to: seg.end }) });
+      }
+      clear() {
+        if (this.current === null)
+          return;
+        this.current = null;
+        this.view.dispatch({ effects: setHighlight.of(null) });
+      }
+      destroy() {
+        this.view.dom.removeEventListener("mousemove", this.onMove);
+        this.view.dom.removeEventListener("mouseleave", this.onLeave);
+      }
+    }
+  );
+}
+function hoverExtension(provider) {
   return (0, import_view.hoverTooltip)(
     (view, pos) => {
       const dict = provider.getDict();
       if (!dict)
+        return null;
+      const charCode = view.state.doc.sliceString(pos, pos + 1).charCodeAt(0);
+      if (isNaN(charCode) || charCode < 13312)
         return null;
       const doc = view.state.doc.toString();
       const seg = segmentAtPos(dict, doc, pos);
@@ -383,8 +590,8 @@ function zhongwenEditorExtension(provider) {
         end: seg.end,
         above: false,
         create() {
-          setCurrentEntry(seg.entry);
-          const dom = renderPopupDom(seg.entry, provider.getOptions());
+          setCurrentEntry(seg.entries[0]);
+          const dom = renderPopupDom(seg.entries, provider.getOptions());
           return {
             dom,
             destroy() {
@@ -396,6 +603,9 @@ function zhongwenEditorExtension(provider) {
     },
     { hoverTime: provider.getHoverDelay() }
   );
+}
+function zhongwenEditorExtension(provider) {
+  return [highlightField, highlightPlugin(provider), hoverExtension(provider)];
 }
 
 // src/reading-view.ts
@@ -417,6 +627,7 @@ function offsetAtPoint(textNode, x, y) {
 function makeReadingProcessor(provider) {
   return (el, _ctx) => {
     var _a;
+    const panelState = { activeKey: null };
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     const textNodes = [];
     let node;
@@ -444,7 +655,7 @@ function makeReadingProcessor(provider) {
         const span = document.createElement("span");
         span.className = "zhongwen-hoverable";
         span.textContent = match[0];
-        attachHover(span, provider);
+        attachHover(span, provider, panelState);
         frag.appendChild(span);
         lastIndex = CHINESE_RUN.lastIndex;
       }
@@ -455,13 +666,12 @@ function makeReadingProcessor(provider) {
     }
   };
 }
-var activeKey = null;
-function attachHover(span, provider) {
+function attachHover(span, provider, panelState) {
   const show = (e) => {
     var _a;
     const dict = provider.getDict();
     if (!dict) {
-      activeKey = null;
+      panelState.activeKey = null;
       return;
     }
     const inner = span.firstChild;
@@ -474,15 +684,15 @@ function attachHover(span, provider) {
     }
     const seg = segmentAtPos(dict, runText, pos);
     if (!seg) {
-      activeKey = null;
+      panelState.activeKey = null;
       destroyPopup();
       return;
     }
     const key = `${seg.start}:${seg.end}:${seg.word}`;
-    if (key === activeKey)
+    if (key === panelState.activeKey)
       return;
-    activeKey = key;
-    showPopupAt(seg.entry, e.clientX, e.clientY, provider.getOptions());
+    panelState.activeKey = key;
+    showPopupAt(seg.entries, e.clientX, e.clientY, provider.getOptions());
     if (inner) {
       try {
         const range = document.createRange();
@@ -499,7 +709,7 @@ function attachHover(span, provider) {
     const to = e.relatedTarget;
     if (to && to.closest(".zhongwen-popup"))
       return;
-    activeKey = null;
+    panelState.activeKey = null;
     destroyPopup();
   });
 }
@@ -582,8 +792,9 @@ var ZhongwenPlugin = class extends import_obsidian.Plugin {
   async saveWord(entry) {
     var _a;
     const path = (0, import_obsidian.normalizePath)(this.settings.wordListNote + ".md");
-    const def = (_a = entry.definitions[0]) != null ? _a : "";
-    const line = `- **${entry.simplified}** (${entry.pinyin}) \u2014 ${def}`;
+    const realDef = (_a = entry.definitions.find((d) => !d.startsWith("CL:"))) != null ? _a : "";
+    const py = toPinyinText(entry.pinyin);
+    const line = `- **${entry.simplified}** (${py}) \u2014 ${realDef}`;
     try {
       const existing = this.app.vault.getAbstractFileByPath(path);
       if (existing instanceof import_obsidian.TFile) {

@@ -18,6 +18,7 @@ import {
 import { Extension } from "@codemirror/state";
 
 import { ZhongwenDictionary, DictEntry } from "./src/dictionary";
+import { toPinyinText } from "./src/pinyin";
 import { zhongwenEditorExtension, ZhongwenProvider } from "./src/editor-extension";
 import { makeReadingProcessor } from "./src/reading-view";
 import {
@@ -127,8 +128,11 @@ export default class ZhongwenPlugin extends Plugin {
 
     private async saveWord(entry: DictEntry) {
         const path = normalizePath(this.settings.wordListNote + ".md");
-        const def = entry.definitions[0] ?? "";
-        const line = `- **${entry.simplified}** (${entry.pinyin}) — ${def}`;
+        // Skip CL: (classifier) entries; use first real definition sense.
+        const realDef = entry.definitions.find((d) => !d.startsWith("CL:")) ?? "";
+        // Convert numeric pinyin to tone marks for readability.
+        const py = toPinyinText(entry.pinyin);
+        const line = `- **${entry.simplified}** (${py}) — ${realDef}`;
 
         try {
             const existing = this.app.vault.getAbstractFileByPath(path);

@@ -25,14 +25,93 @@ function charCount(s: string): number {
     return Array.from(s).length;
 }
 
-/**
- * Build the popup card element for an entry. Pure DOM construction — no
- * positioning, no global state. Uses Obsidian-styled classes from styles.css.
- */
-export function renderPopupDom(entry: DictEntry, opts: PopupOptions): HTMLElement {
-    const root = document.createElement("div");
-    root.className = "zhongwen-popup";
+/** Register / domain tags CC-CEDICT puts in leading parentheses. */
+const REGISTER_TAGS = new Set([
+    "idiom", "coll.", "fig.", "lit.", "old", "dialect", "slang", "vulgar",
+    "derog.", "honorific", "polite", "formal", "archaic", "abbr.", "onom.",
+    "neologism", "euphemism", "loanword", "surname", "math.", "phys.",
+    "chem.", "bio.", "med.", "comp.", "electr.", "mus.", "ling.", "gram.",
+    "astron.", "geol.", "econ.", "law", "tw", "prc", "hk",
+]);
 
+// Embedded reference: optional "trad|simp" hanzi followed by [pinyin].
+// Also matches a bare [pinyin] (e.g. "also pr. [di4]").
+const REF_RE =
+    /([㐀-鿿豈-﫿·|]+)?\[([A-Za-z0-9:·,\s]+)\]/g;
+
+/** Append tone-colored pinyin syllables to `parent`, space-separated. */
+function appendPinyin(parent: HTMLElement, raw: string, leadingSpace: boolean): void {
+    const syls = toPinyinSyllables(raw);
+    syls.forEach((syl, i) => {
+        const span = parent.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
+        span.setText((leadingSpace || i > 0 ? " " : "") + syl.text);
+        span.style.color = TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)";
+    });
+}
+
+/** Render def text, styling embedded "汉字[pinyin]" refs and bare [pinyin]. */
+function renderInlineRefs(parent: HTMLElement, text: string): void {
+    REF_RE.lastIndex = 0;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = REF_RE.exec(text)) !== null) {
+        if (m.index > last) parent.appendText(text.slice(last, m.index));
+        const ref = parent.createSpan({ cls: "zhongwen-ref" });
+        if (m[1]) {
+            const forms = m[1].split("|");
+            ref.createSpan({
+                cls: "zhongwen-ref-hanzi",
+                text: forms[forms.length - 1],
+            });
+            appendPinyin(ref, m[2], true);
+        } else {
+            appendPinyin(ref, m[2], false);
+        }
+        last = REF_RE.lastIndex;
+    }
+    if (last < text.length) parent.appendText(text.slice(last));
+}
+
+/** Render one definition sense: leading register badges + inline refs. */
+function renderDefinitionInto(row: HTMLElement, text: string): void {
+    let rest = text;
+    let m: RegExpMatchArray | null;
+    // Pull off leading "(tag)" groups that are recognized register tags.
+    while ((m = rest.match(/^\(([^)]+)\)\s*/)) !== null) {
+        const inner = m[1];
+        const first = inner.split(/[\s;,]/)[0].toLowerCase();
+        if (REGISTER_TAGS.has(first)) {
+            row.createSpan({ cls: "zhongwen-tag", text: inner });
+            rest = rest.slice(m[0].length);
+        } else break;
+    }
+    renderInlineRefs(row, rest);
+}
+
+/** One classifier (measure word): its hanzi + raw numeric pinyin. */
+interface Classifier {
+    hanzi: string;
+    pinyin: string;
+}
+
+/**
+ * Parse a CC-CEDICT "CL:" sense (without the "CL:" prefix) into classifiers.
+ * Forms: "家[jia1]", "個|个[ge4]" (trad|simp), comma-separated for several.
+ */
+function parseClassifiers(s: string): Classifier[] {
+    const out: Classifier[] = [];
+    for (const part of s.split(",")) {
+        const m = part.trim().match(/^([^\[]+)\[([^\]]+)\]$/);
+        if (!m) continue;
+        // Prefer the simplified form (after "|") when both are given.
+        const forms = m[1].split("|");
+        out.push({ hanzi: forms[forms.length - 1], pinyin: m[2] });
+    }
+    return out;
+}
+
+/** Render one entry block (header + defs) into `root`. */
+function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOptions): void {
     // --- Header: hanzi + pinyin ---
     const header = root.createDiv({ cls: "zhongwen-popup-header" });
 
@@ -48,32 +127,79 @@ export function renderPopupDom(entry: DictEntry, opts: PopupOptions): HTMLElemen
     for (const syl of toPinyinSyllables(entry.pinyin)) {
         const span = pinyin.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
         span.setText(syl.text + " ");
-        // Inline fallback so it still colors correctly if styles.css missing.
         span.style.color = TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)";
     }
 
     root.createDiv({ cls: "zhongwen-popup-separator" });
 
-    // --- Definitions (cap at 5, like Zhongwen) ---
-    const defs = entry.definitions.slice(0, 5);
+    // --- Split real senses from classifier ("CL:") notes ---
+    const senses: string[] = [];
+    const classifiers: Classifier[] = [];
+    for (const def of entry.definitions) {
+        if (def.startsWith("CL:")) {
+            classifiers.push(...parseClassifiers(def.slice(3)));
+        } else {
+            const parts = def.split(/;\s+(?![^(]*\))/);
+            for (const p of parts) {
+                const trimmed = p.trim();
+                if (trimmed) senses.push(trimmed);
+            }
+        }
+    }
+
+    // --- Definitions (cap at 5) ---
+    const defs = senses.slice(0, 5);
     defs.forEach((def, i) => {
         const row = root.createDiv({ cls: "zhongwen-popup-definition" });
         if (defs.length > 1) {
             row.createSpan({ cls: "zhongwen-popup-definition-number", text: `${i + 1}.` });
         }
-        row.createSpan({ text: def });
+        renderDefinitionInto(row, def);
     });
 
-    // --- Meta row (character count; HSK dataset not bundled — see README) ---
+    // --- Measure word row ---
+    if (classifiers.length) {
+        const row = root.createDiv({ cls: "zhongwen-popup-measure" });
+        row.createSpan({ cls: "zhongwen-popup-measure-label", text: "measure word" });
+        classifiers.forEach((cl, i) => {
+            const item = row.createSpan({ cls: "zhongwen-popup-measure-item" });
+            if (i > 0) item.setText(", ");
+            item.createSpan({ cls: "zhongwen-popup-measure-hanzi", text: cl.hanzi });
+            const py = toPinyinSyllables(cl.pinyin);
+            for (const syl of py) {
+                const span = item.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
+                span.setText(" " + syl.text);
+                span.style.color = TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)";
+            }
+        });
+    }
+}
+
+/**
+ * Build the popup card element for one or more entries (e.g. multiple
+ * readings of 教). Pure DOM — no positioning, no global state.
+ */
+export function renderPopupDom(entries: DictEntry[], opts: PopupOptions): HTMLElement {
+    const root = document.createElement("div");
+    root.className = "zhongwen-popup";
+
+    entries.forEach((entry, i) => {
+        if (i > 0) {
+            root.createDiv({ cls: "zhongwen-popup-entry-sep" });
+        }
+        renderEntryBlock(root, entry, opts);
+    });
+
+    // --- Meta row ---
     if (opts.showHSKLevel) {
-        const n = charCount(entry.simplified);
+        const n = charCount(entries[0].simplified);
         root.createDiv({
             cls: "zhongwen-popup-meta",
             text: `${n} character${n === 1 ? "" : "s"}`,
         });
     }
 
-    // --- Save hint ---
+    // --- Save hint (saves first/primary entry) ---
     root.createDiv({ cls: "zhongwen-popup-hint", text: 'Press "S" to save' });
 
     return root;
@@ -148,14 +274,14 @@ export function destroyPopup(): void {
  * imperative popup.
  */
 export function showPopupAt(
-    entry: DictEntry,
+    entries: DictEntry[],
     x: number,
     y: number,
     opts: PopupOptions
 ): void {
     destroyPopup();
 
-    const dom = renderPopupDom(entry, opts);
+    const dom = renderPopupDom(entries, opts);
     dom.style.position = "fixed";
     dom.style.visibility = "hidden";
     document.body.appendChild(dom);
@@ -178,7 +304,7 @@ export function showPopupAt(
     dom.style.visibility = "visible";
 
     currentPopup = dom;
-    currentEntry = entry;
+    currentEntry = entries[0];
 
     // --- close handlers ---
     const onKey = (e: KeyboardEvent) => {

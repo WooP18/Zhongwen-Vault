@@ -51,7 +51,8 @@ export function chineseWindowAt(text: string, pos: number): string {
 /** Result of segmenting at a position. */
 export interface Segment {
     word: string;
-    entry: DictEntry;
+    /** All dictionary entries for this word (e.g. multiple readings of 教). */
+    entries: DictEntry[];
     /** Start index in the source text. */
     start: number;
     /** End index (exclusive) in the source text. */
@@ -60,7 +61,7 @@ export interface Segment {
 
 /**
  * Segment the word at `pos`: take the CJK window, run greedy longest-match
- * against the dictionary, return the matched word + best entry + span.
+ * against the dictionary, return ALL matched entries + span.
  * Returns null if nothing Chinese is under `pos` or no dict match exists.
  */
 export function segmentAtPos(
@@ -75,9 +76,13 @@ export function segmentAtPos(
     if (!result || result.entries.length === 0) return null;
 
     const matchLen = result.matchLen || 1;
+    // Keep only entries whose match equals the longest match (skip shorter fallbacks).
+    const entries = result.entries.filter((e) => e.match.length === matchLen);
+    if (entries.length === 0) return null;
+
     return {
         word: window.slice(0, matchLen),
-        entry: result.entries[0],
+        entries,
         start: pos,
         end: pos + matchLen,
     };

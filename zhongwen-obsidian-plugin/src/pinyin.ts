@@ -71,7 +71,11 @@ export interface PinyinSyllable {
  */
 export function toPinyinSyllables(syllables: string): PinyinSyllable[] {
     const out: PinyinSyllable[] = [];
-    const parts = syllables.split(/[\s·]+/);
+    // Split on whitespace/middle-dot AND after each tone digit, so jammed
+    // refs like "qi1yan2" (common inside embedded cross-references) tokenize.
+    const parts = syllables
+        .replace(/([1-5])(?=[a-zA-Zü:])/g, "$1 ")
+        .split(/[\s·]+/);
 
     for (const syllable of parts) {
         if (!syllable) continue;

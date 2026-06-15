@@ -1,10 +1,15 @@
 # Zhongwen — Chinese Popup Dictionary for Obsidian
 
+**Made by [WooP18](https://github.com/WooP18)**
+
 Hover over Chinese text anywhere in Obsidian (editor or reading view) to see a
 floating card with pinyin (tone-colored), CC-CEDICT definitions, and a save
-shortcut. Same dictionary, segmentation, and UX as the
-[Zhongwen browser extension](https://github.com/cschiller/zhongwen) — running
-inside Obsidian.
+shortcut.
+
+Inspired by and built upon the
+[Zhongwen Chrome/Firefox extension](https://github.com/cschiller/zhongwen) by
+Christian Schiller — same CC-CEDICT dictionary, same greedy segmentation
+algorithm, same popup UX — now running natively inside Obsidian.
 
 ## Files
 
@@ -93,7 +98,13 @@ Obsidian at runtime) — confirmed not bundled.
 
 ## Credits
 
-Dictionary + lookup/pinyin logic ported from
-[Zhongwen](https://github.com/cschiller/zhongwen) (GPL-2.0) by Christian
-Schiller, itself based on Rikaikun / Rikaichan / RikaiXUL. CC-CEDICT by MDBG.
-This plugin inherits **GPL-2.0**.
+**Plugin author:** [WooP18](https://github.com/WooP18)
+
+**Inspired by:** [Zhongwen](https://github.com/cschiller/zhongwen) — the
+Chrome/Firefox popup dictionary by Christian Schiller. This plugin would not
+exist without his work. Dictionary lookup, binary-search index, greedy
+segmentation algorithm, and pinyin conversion are all ported faithfully from
+Zhongwen's source. Huge thanks to Christian for building and open-sourcing it.
+
+Zhongwen itself traces back to Rikaikun / Rikaichan / RikaiXUL. CC-CEDICT
+dictionary by MDBG. This plugin inherits **GPL-2.0** from Zhongwen.

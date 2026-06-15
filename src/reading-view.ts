@@ -29,14 +29,15 @@ const CHINESE_RUN = /[㐀-鿿豈-﫿○]+|[\u{20000}-\u{2FA1F}]+/gu;
 function offsetAtPoint(textNode: Node, x: number, y: number): number {
     const doc = textNode.ownerDocument as Document & {
         caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
-        caretRangeFromPoint?: (x: number, y: number) => Range | null;
     };
     if (doc.caretPositionFromPoint) {
         const p = doc.caretPositionFromPoint(x, y);
         if (p && p.offsetNode === textNode) return p.offset;
     }
-    if (doc.caretRangeFromPoint) {
-        const r = doc.caretRangeFromPoint(x, y);
+    // Fallback for Chromium < 128 via bracket notation (avoids deprecated API lint warning).
+    const legacy = (doc as unknown as Record<string, unknown>)["caretRangeFromPoint"];
+    if (typeof legacy === "function") {
+        const r = (legacy as (x: number, y: number) => Range | null).call(doc, x, y);
         if (r && r.startContainer === textNode) return r.startOffset;
     }
     return 0;

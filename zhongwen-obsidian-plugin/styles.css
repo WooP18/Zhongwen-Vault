@@ -1,0 +1,134 @@
+/* Zhongwen for Obsidian — popup styles.
+   All colors use Obsidian CSS variables so the popup adapts to any theme.
+   The only literal colors are tone-color fallbacks inside var(..., fallback). */
+
+.zhongwen-popup {
+  /* Layout */
+  position: fixed;
+  z-index: 9999;
+  min-width: 220px;
+  max-width: 340px;
+  padding: 6px 0;
+  border-radius: var(--radius-m);
+
+  /* Theme-aware colors */
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: var(--shadow-l);
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+
+  /* Animation */
+  animation: zhongwen-fadein 120ms ease-out;
+}
+
+@keyframes zhongwen-fadein {
+  from { opacity: 0; transform: translateY(-3px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Character + pinyin header row */
+.zhongwen-popup-header {
+  padding: 8px 14px 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.zhongwen-popup-character {
+  font-size: 1.4em;
+  font-weight: 600;
+  color: var(--text-normal);
+  font-family: var(--font-text);
+}
+
+.zhongwen-popup-trad {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.zhongwen-popup-pinyin {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+/* Tone colors — theme var first, spec fallback second. */
+.zhongwen-tone1 { color: var(--color-red, #d93025); }
+.zhongwen-tone2 { color: var(--color-orange, #e8711a); }
+.zhongwen-tone3 { color: var(--color-green, #1a7f37); }
+.zhongwen-tone4 { color: var(--color-blue, #1a56db); }
+.zhongwen-tone5 { color: var(--text-muted); }
+
+/* Separator */
+.zhongwen-popup-separator {
+  height: 1px;
+  background: var(--background-modifier-border);
+  margin: 4px 0;
+}
+
+/* Definition rows */
+.zhongwen-popup-definition {
+  padding: 4px 14px;
+  color: var(--text-normal);
+  line-height: 1.5;
+}
+
+.zhongwen-popup-definition-number {
+  color: var(--text-faint);
+  font-size: 0.85em;
+  margin-right: 4px;
+}
+
+/* Meta row (HSK level / char count) */
+.zhongwen-popup-meta {
+  padding: 4px 14px 6px;
+  color: var(--text-faint);
+  font-size: 0.85em;
+}
+
+/* Save hint row */
+.zhongwen-popup-hint {
+  padding: 3px 14px 5px;
+  color: var(--text-faint);
+  font-size: 0.8em;
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 2px;
+}
+
+/* Save confirmation badge */
+.zhongwen-popup-saved {
+  padding: 3px 14px 5px;
+  color: var(--text-success, var(--text-accent));
+  font-size: 0.8em;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.zhongwen-popup-saved-show { opacity: 1; }
+
+/* Hoverable Chinese run in reading view */
+.zhongwen-hoverable {
+  cursor: help;
+}
+
+/* Per-character highlight overlay for the matched word under the cursor.
+   Container is a zero-size anchor; each matched char rect is a child box
+   positioned in fixed (viewport) coords. Theme-aware, no hardcoded colors. */
+.zhongwen-highlight {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 9998;            /* just below the popup */
+  pointer-events: none;     /* never steals hover from the text */
+}
+.zhongwen-highlight-box {
+  position: fixed;
+  background-color: var(--text-highlight-bg);
+  border-radius: var(--radius-s);
+  box-shadow: 0 0 0 1px var(--background-modifier-border);
+  transition: left 60ms ease-out, top 60ms ease-out, width 60ms ease-out;
+}

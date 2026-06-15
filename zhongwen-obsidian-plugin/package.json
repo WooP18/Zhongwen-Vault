@@ -1,0 +1,21 @@
+{
+  "name": "zhongwen-obsidian",
+  "version": "1.0.0",
+  "description": "Chinese popup dictionary for Obsidian, ported from the Zhongwen browser extension.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+  },
+  "keywords": ["obsidian", "chinese", "dictionary", "pinyin", "cedict"],
+  "author": "Personal",
+  "license": "GPL-2.0",
+  "devDependencies": {
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0",
+    "obsidian": "latest",
+    "typescript": "^5.0.0"
+  }
+}

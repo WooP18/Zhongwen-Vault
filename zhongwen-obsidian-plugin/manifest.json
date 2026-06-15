@@ -1,0 +1,10 @@
+{
+  "id": "zhongwen-obsidian",
+  "name": "Zhongwen — Chinese Popup Dictionary",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Hover over Chinese text to see pinyin and definitions, exactly like the Zhongwen browser extension.",
+  "author": "Personal",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}

@@ -45,7 +45,7 @@ function appendPinyin(parent: HTMLElement, raw: string, leadingSpace: boolean): 
     syls.forEach((syl, i) => {
         const span = parent.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
         span.setText((leadingSpace || i > 0 ? " " : "") + syl.text);
-        span.style.color = TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)";
+        span.setCssStyles({ color: TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)" });
     });
 }
 
@@ -127,7 +127,7 @@ function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOption
     for (const syl of toPinyinSyllables(entry.pinyin)) {
         const span = pinyin.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
         span.setText(syl.text + " ");
-        span.style.color = TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)";
+        span.setCssStyles({ color: TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)" });
     }
 
     root.createDiv({ cls: "zhongwen-popup-separator" });
@@ -169,7 +169,7 @@ function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOption
             for (const syl of py) {
                 const span = item.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
                 span.setText(" " + syl.text);
-                span.style.color = TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)";
+                span.setCssStyles({ color: TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)" });
             }
         });
     }
@@ -180,7 +180,7 @@ function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOption
  * readings of 教). Pure DOM — no positioning, no global state.
  */
 export function renderPopupDom(entries: DictEntry[], opts: PopupOptions): HTMLElement {
-    const root = document.createElement("div");
+    const root = activeDocument.createElement("div");
     root.className = "zhongwen-popup";
 
     entries.forEach((entry, i) => {

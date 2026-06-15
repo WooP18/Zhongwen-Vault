@@ -1,4 +1,4 @@
-# Zhongwen — Chinese Popup Dictionary for Obsidian
+# Zhongwen Vault — Chinese Popup Dictionary for Obsidian
 
 **Made by [WooP18](https://github.com/WooP18)**
 
@@ -49,10 +49,10 @@ Obsidian at runtime) — confirmed not bundled.
 ## Manual install into a vault
 
 1. `npm run build`
-2. Create `<vault>/.obsidian/plugins/zhongwen-obsidian/`
+2. Create `<vault>/.obsidian/plugins/zhongwen-vault/`
 3. Copy into it: `main.js`, `manifest.json`, `styles.css`, and the whole
    `data/` folder (both `cedict_ts.u8` and `cedict.idx` — required at runtime).
-4. Obsidian → Settings → Community plugins → enable **Zhongwen**.
+4. Obsidian → Settings → Community plugins → enable **Zhongwen Vault**.
 5. Open a note with Chinese, e.g. `今天天气很好。我想学习中文。`
 6. Hover characters → popup appears. Switch to Reading view → still works.
 7. Press `S` while a popup is visible → word appended to the word-list note.

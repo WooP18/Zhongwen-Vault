@@ -1,7 +1,7 @@
 {
-  "name": "zhongwen-obsidian",
+  "name": "zhongwen-vault",
   "version": "1.0.0",
-  "description": "Chinese popup dictionary for Obsidian, ported from the Zhongwen browser extension.",
+  "description": "Chinese popup dictionary for Obsidian, inspired by the Zhongwen browser extension.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

@@ -24,7 +24,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // main.ts
 var main_exports = {};
 __export(main_exports, {
-  default: () => ZhongwenPlugin
+  default: () => ZhongwenVaultPlugin
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
@@ -723,7 +723,7 @@ var DEFAULT_SETTINGS = {
   enableInEditor: true,
   enableInReadingView: true
 };
-var ZhongwenPlugin = class extends import_obsidian.Plugin {
+var ZhongwenVaultPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.dict = null;
@@ -734,8 +734,8 @@ var ZhongwenPlugin = class extends import_obsidian.Plugin {
   async onload() {
     await this.loadSettings();
     this.loadDictionary().catch((e) => {
-      console.error("Zhongwen: failed to load dictionary", e);
-      new import_obsidian.Notice("Zhongwen: failed to load dictionary (see console)");
+      console.error("Zhongwen Vault: failed to load dictionary", e);
+      new import_obsidian.Notice("Zhongwen Vault: failed to load dictionary (see console)");
     });
     const provider = {
       getDict: () => this.settings.enableInEditor ? this.dict : null,
@@ -751,7 +751,7 @@ var ZhongwenPlugin = class extends import_obsidian.Plugin {
       })
     );
     this.registerDomEvent(document, "keydown", (e) => this.onKeyDown(e), true);
-    this.addSettingTab(new ZhongwenSettingTab(this.app, this));
+    this.addSettingTab(new ZhongwenVaultSettingTab(this.app, this));
   }
   onunload() {
     destroyPopup();
@@ -817,8 +817,8 @@ ${line}
       }
       showSaveFeedback();
     } catch (err) {
-      console.error("Zhongwen: save failed", err);
-      new import_obsidian.Notice("Zhongwen: failed to save word (see console)");
+      console.error("Zhongwen Vault: save failed", err);
+      new import_obsidian.Notice("Zhongwen Vault: failed to save word (see console)");
     }
   }
   async loadSettings() {
@@ -839,7 +839,7 @@ ${line}
     this.app.workspace.updateOptions();
   }
 };
-var ZhongwenSettingTab = class extends import_obsidian.PluginSettingTab {
+var ZhongwenVaultSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;

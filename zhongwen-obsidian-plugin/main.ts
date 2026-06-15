@@ -1,5 +1,5 @@
 /*
- Zhongwen for Obsidian — plugin entry point.
+ Zhongwen Vault — plugin entry point.
 
  Loads the bundled CC-CEDICT data from the plugin folder at runtime (keeping
  main.js small), wires up the editor (CM6) + reading-view integrations, the
@@ -28,7 +28,7 @@ import {
     showSaveFeedback,
 } from "./src/popup";
 
-interface ZhongwenSettings {
+interface ZhongwenVaultSettings {
     wordListNote: string;
     showHSKLevel: boolean;
     showTraditional: boolean;
@@ -37,7 +37,7 @@ interface ZhongwenSettings {
     enableInReadingView: boolean;
 }
 
-const DEFAULT_SETTINGS: ZhongwenSettings = {
+const DEFAULT_SETTINGS: ZhongwenVaultSettings = {
     wordListNote: "Chinese/Word List",
     showHSKLevel: true,
     showTraditional: false,
@@ -46,8 +46,8 @@ const DEFAULT_SETTINGS: ZhongwenSettings = {
     enableInReadingView: true,
 };
 
-export default class ZhongwenPlugin extends Plugin {
-    settings!: ZhongwenSettings;
+export default class ZhongwenVaultPlugin extends Plugin {
+    settings!: ZhongwenVaultSettings;
     private dict: ZhongwenDictionary | null = null;
     // Mutable array handed to registerEditorExtension; we swap its contents and
     // call workspace.updateOptions() to apply settings changes without reload.
@@ -58,8 +58,8 @@ export default class ZhongwenPlugin extends Plugin {
 
         // Load dictionary asynchronously; hovers no-op until ready.
         this.loadDictionary().catch((e) => {
-            console.error("Zhongwen: failed to load dictionary", e);
-            new Notice("Zhongwen: failed to load dictionary (see console)");
+            console.error("Zhongwen Vault: failed to load dictionary", e);
+            new Notice("Zhongwen Vault: failed to load dictionary (see console)");
         });
 
         const provider: ZhongwenProvider = {
@@ -84,7 +84,7 @@ export default class ZhongwenPlugin extends Plugin {
         // Global "S" to save the word in the currently visible popup.
         this.registerDomEvent(document, "keydown", (e) => this.onKeyDown(e), true);
 
-        this.addSettingTab(new ZhongwenSettingTab(this.app, this));
+        this.addSettingTab(new ZhongwenVaultSettingTab(this.app, this));
     }
 
     onunload() {
@@ -155,8 +155,8 @@ export default class ZhongwenPlugin extends Plugin {
             }
             showSaveFeedback();
         } catch (err) {
-            console.error("Zhongwen: save failed", err);
-            new Notice("Zhongwen: failed to save word (see console)");
+            console.error("Zhongwen Vault: save failed", err);
+            new Notice("Zhongwen Vault: failed to save word (see console)");
         }
     }
 
@@ -181,10 +181,10 @@ export default class ZhongwenPlugin extends Plugin {
     }
 }
 
-class ZhongwenSettingTab extends PluginSettingTab {
-    plugin: ZhongwenPlugin;
+class ZhongwenVaultSettingTab extends PluginSettingTab {
+    plugin: ZhongwenVaultPlugin;
 
-    constructor(app: App, plugin: ZhongwenPlugin) {
+    constructor(app: App, plugin: ZhongwenVaultPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }

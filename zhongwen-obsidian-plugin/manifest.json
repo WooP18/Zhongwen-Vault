@@ -1,10 +1,10 @@
 {
-  "id": "zhongwen-obsidian",
-  "name": "Zhongwen — Chinese Popup Dictionary",
+  "id": "zhongwen-vault",
+  "name": "Zhongwen Vault",
   "version": "1.0.0",
   "minAppVersion": "1.4.0",
-  "description": "Hover over Chinese text to see pinyin and definitions, exactly like the Zhongwen browser extension.",
-  "author": "Personal",
-  "authorUrl": "",
+  "description": "Hover over Chinese text to see tone-colored pinyin and CC-CEDICT definitions. Inspired by the Zhongwen browser extension.",
+  "author": "WooP18",
+  "authorUrl": "https://github.com/WooP18",
   "isDesktopOnly": false
 }

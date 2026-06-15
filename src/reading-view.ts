@@ -46,7 +46,8 @@ export function makeReadingProcessor(provider: ReadingProvider) {
     return (el: HTMLElement, _ctx: MarkdownPostProcessorContext) => {
         // Per-panel state: isolated so multiple reading panels don't interfere.
         const panelState: { activeKey: string | null } = { activeKey: null };
-        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const ownerDoc = el.ownerDocument;
+        const walker = ownerDoc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
         const textNodes: Text[] = [];
         let node: Node | null;
         while ((node = walker.nextNode())) {
@@ -62,17 +63,17 @@ export function makeReadingProcessor(provider: ReadingProvider) {
             if (!CHINESE_RUN.test(text)) continue;
             CHINESE_RUN.lastIndex = 0;
 
-            const frag = document.createDocumentFragment();
+            const frag = ownerDoc.createDocumentFragment();
             let lastIndex = 0;
             let match: RegExpExecArray | null;
 
             while ((match = CHINESE_RUN.exec(text)) !== null) {
                 if (match.index > lastIndex) {
                     frag.appendChild(
-                        document.createTextNode(text.slice(lastIndex, match.index))
+                        ownerDoc.createTextNode(text.slice(lastIndex, match.index))
                     );
                 }
-                const span = document.createElement("span");
+                const span = ownerDoc.createElement("span");
                 span.className = "zhongwen-hoverable";
                 span.textContent = match[0];
                 attachHover(span, provider, panelState);
@@ -80,7 +81,7 @@ export function makeReadingProcessor(provider: ReadingProvider) {
                 lastIndex = CHINESE_RUN.lastIndex;
             }
             if (lastIndex < text.length) {
-                frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+                frag.appendChild(ownerDoc.createTextNode(text.slice(lastIndex)));
             }
             textNode.replaceWith(frag);
         }
@@ -124,7 +125,7 @@ function attachHover(
         // ...then highlight just the matched characters via a Range over the run.
         if (inner) {
             try {
-                const range = document.createRange();
+                const range = span.ownerDocument.createRange();
                 range.setStart(inner, seg.start);
                 range.setEnd(inner, Math.min(seg.end, runText.length));
                 showHighlight(range.getClientRects());

@@ -59,7 +59,7 @@ export class ZhongwenDictionary {
             const mi = Math.floor((beg + end) / 2);
             const i = haystack.lastIndexOf("\n", mi) + 1;
 
-            const mis = haystack.substr(i, needle.length);
+            const mis = haystack.substring(i, i + needle.length);
             if (needle < mis) {
                 end = i - 1;
             } else if (needle > mis) {
@@ -107,7 +107,7 @@ export class ZhongwenDictionary {
                 const found = ZhongwenDictionary.find(word + ",", index);
                 if (!found) {
                     this.cache[word] = [];
-                    word = word.substr(0, word.length - 1);
+                    word = word.substring(0, word.length - 1);
                     continue;
                 }
                 ix = found.split(",");
@@ -132,7 +132,7 @@ export class ZhongwenDictionary {
                 if (entry) entries.push(entry);
             }
 
-            word = word.substr(0, word.length - 1);
+            word = word.substring(0, word.length - 1);
         }
 
         if (entries.length === 0) return null;

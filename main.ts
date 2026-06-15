@@ -82,7 +82,7 @@ export default class ZhongwenVaultPlugin extends Plugin {
         );
 
         // Global "S" to save the word in the currently visible popup.
-        this.registerDomEvent(document, "keydown", (e) => this.onKeyDown(e), true);
+        this.registerDomEvent(activeDocument, "keydown", (e) => this.onKeyDown(e), true);
 
         this.addSettingTab(new ZhongwenVaultSettingTab(this.app, this));
     }
@@ -115,7 +115,7 @@ export default class ZhongwenVaultPlugin extends Plugin {
     private onKeyDown(e: KeyboardEvent) {
         if (e.key !== "s" && e.key !== "S") return;
         // Only act when a popup is actually on screen.
-        const popupVisible = !!document.querySelector(".zhongwen-popup");
+        const popupVisible = !!activeDocument.querySelector(".zhongwen-popup");
         const entry = getCurrentEntry();
         if (!popupVisible || !entry) return;
         // Don't steal modified shortcuts (Ctrl/Cmd+S = save file).
@@ -123,7 +123,7 @@ export default class ZhongwenVaultPlugin extends Plugin {
 
         e.preventDefault();
         e.stopPropagation();
-        this.saveWord(entry);
+        void this.saveWord(entry);
     }
 
     private async saveWord(entry: DictEntry) {
@@ -161,7 +161,7 @@ export default class ZhongwenVaultPlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<ZhongwenVaultSettings>);
     }
 
     async saveSettings() {
@@ -238,7 +238,6 @@ class ZhongwenVaultSettingTab extends PluginSettingTab {
                 s
                     .setLimits(100, 800, 50)
                     .setValue(this.plugin.settings.hoverDelayMs)
-                    .setDynamicTooltip()
                     .onChange(async (v) => {
                         this.plugin.settings.hoverDelayMs = v;
                         await this.plugin.saveSettings();

@@ -43,7 +43,7 @@ var ZhongwenDictionary = class _ZhongwenDictionary {
     while (beg < end) {
       const mi = Math.floor((beg + end) / 2);
       const i = haystack.lastIndexOf("\n", mi) + 1;
-      const mis = haystack.substr(i, needle.length);
+      const mis = haystack.substring(i, i + needle.length);
       if (needle < mis) {
         end = i - 1;
       } else if (needle > mis) {
@@ -88,7 +88,7 @@ var ZhongwenDictionary = class _ZhongwenDictionary {
           const found = _ZhongwenDictionary.find(word + ",", index);
           if (!found) {
             this.cache[word] = [];
-            word = word.substr(0, word.length - 1);
+            word = word.substring(0, word.length - 1);
             continue;
           }
           ix = found.split(",");
@@ -110,7 +110,7 @@ var ZhongwenDictionary = class _ZhongwenDictionary {
           if (entry)
             entries.push(entry);
         }
-        word = word.substr(0, word.length - 1);
+        word = word.substring(0, word.length - 1);
       }
     if (entries.length === 0)
       return null;
@@ -327,7 +327,7 @@ function renderDefinitionInto(row, text) {
 function parseClassifiers(s) {
   const out = [];
   for (const part of s.split(",")) {
-    const m = part.trim().match(/^([^\[]+)\[([^\]]+)\]$/);
+    const m = part.trim().match(/^([^[]+)\[([^\]]+)\]$/);
     if (!m)
       continue;
     const forms = m[1].split("|");
@@ -416,18 +416,15 @@ var cleanup = null;
 var highlightEl = null;
 function showHighlight(rects) {
   if (!highlightEl) {
-    highlightEl = document.createElement("div");
+    highlightEl = activeDocument.createElement("div");
     highlightEl.className = "zhongwen-highlight";
-    document.body.appendChild(highlightEl);
+    activeDocument.body.appendChild(highlightEl);
   }
   highlightEl.empty();
   for (let i = 0; i < rects.length; i++) {
     const r = rects[i];
     const box = highlightEl.createDiv({ cls: "zhongwen-highlight-box" });
-    box.style.left = `${r.left}px`;
-    box.style.top = `${r.top}px`;
-    box.style.width = `${r.width}px`;
-    box.style.height = `${r.height}px`;
+    box.setCssStyles({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
   }
 }
 function hideHighlight() {
@@ -457,9 +454,8 @@ function destroyPopup() {
 function showPopupAt(entries, x, y, opts) {
   destroyPopup();
   const dom = renderPopupDom(entries, opts);
-  dom.style.position = "fixed";
-  dom.style.visibility = "hidden";
-  document.body.appendChild(dom);
+  dom.setCssStyles({ position: "fixed", visibility: "hidden" });
+  activeDocument.body.appendChild(dom);
   const rect = dom.getBoundingClientRect();
   const margin = 12;
   const vw = window.innerWidth;
@@ -472,9 +468,7 @@ function showPopupAt(entries, x, y, opts) {
     top = y - rect.height - margin;
   left = Math.max(4, Math.min(left, vw - rect.width - 4));
   top = Math.max(4, Math.min(top, vh - rect.height - 4));
-  dom.style.left = `${left}px`;
-  dom.style.top = `${top}px`;
-  dom.style.visibility = "visible";
+  dom.setCssStyles({ left: `${left}px`, top: `${top}px`, visibility: "visible" });
   currentPopup = dom;
   currentEntry = entries[0];
   const onKey = (e) => {
@@ -487,17 +481,17 @@ function showPopupAt(entries, x, y, opts) {
     }
   };
   const onScroll = () => destroyPopup();
-  document.addEventListener("keydown", onKey, true);
-  document.addEventListener("mousedown", onClick, true);
+  activeDocument.addEventListener("keydown", onKey, true);
+  activeDocument.addEventListener("mousedown", onClick, true);
   window.addEventListener("scroll", onScroll, true);
   cleanup = () => {
-    document.removeEventListener("keydown", onKey, true);
-    document.removeEventListener("mousedown", onClick, true);
+    activeDocument.removeEventListener("keydown", onKey, true);
+    activeDocument.removeEventListener("mousedown", onClick, true);
     window.removeEventListener("scroll", onScroll, true);
   };
 }
 function showSaveFeedback() {
-  const popup = currentPopup != null ? currentPopup : document.querySelector(".zhongwen-popup");
+  const popup = currentPopup != null ? currentPopup : activeDocument.querySelector(".zhongwen-popup");
   if (!popup)
     return;
   let badge = popup.querySelector(".zhongwen-popup-saved");
@@ -628,7 +622,8 @@ function makeReadingProcessor(provider) {
   return (el, _ctx) => {
     var _a;
     const panelState = { activeKey: null };
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const ownerDoc = el.ownerDocument;
+    const walker = ownerDoc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     const textNodes = [];
     let node;
     while (node = walker.nextNode()) {
@@ -643,16 +638,16 @@ function makeReadingProcessor(provider) {
       if (!CHINESE_RUN.test(text))
         continue;
       CHINESE_RUN.lastIndex = 0;
-      const frag = document.createDocumentFragment();
+      const frag = ownerDoc.createDocumentFragment();
       let lastIndex = 0;
       let match;
       while ((match = CHINESE_RUN.exec(text)) !== null) {
         if (match.index > lastIndex) {
           frag.appendChild(
-            document.createTextNode(text.slice(lastIndex, match.index))
+            ownerDoc.createTextNode(text.slice(lastIndex, match.index))
           );
         }
-        const span = document.createElement("span");
+        const span = ownerDoc.createElement("span");
         span.className = "zhongwen-hoverable";
         span.textContent = match[0];
         attachHover(span, provider, panelState);
@@ -660,7 +655,7 @@ function makeReadingProcessor(provider) {
         lastIndex = CHINESE_RUN.lastIndex;
       }
       if (lastIndex < text.length) {
-        frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        frag.appendChild(ownerDoc.createTextNode(text.slice(lastIndex)));
       }
       textNode.replaceWith(frag);
     }
@@ -695,7 +690,7 @@ function attachHover(span, provider, panelState) {
     showPopupAt(seg.entries, e.clientX, e.clientY, provider.getOptions());
     if (inner) {
       try {
-        const range = document.createRange();
+        const range = span.ownerDocument.createRange();
         range.setStart(inner, seg.start);
         range.setEnd(inner, Math.min(seg.end, runText.length));
         showHighlight(range.getClientRects());
@@ -750,7 +745,7 @@ var ZhongwenVaultPlugin = class extends import_obsidian.Plugin {
         getOptions: () => this.popupOptions()
       })
     );
-    this.registerDomEvent(document, "keydown", (e) => this.onKeyDown(e), true);
+    this.registerDomEvent(activeDocument, "keydown", (e) => this.onKeyDown(e), true);
     this.addSettingTab(new ZhongwenVaultSettingTab(this.app, this));
   }
   onunload() {
@@ -779,7 +774,7 @@ var ZhongwenVaultPlugin = class extends import_obsidian.Plugin {
   onKeyDown(e) {
     if (e.key !== "s" && e.key !== "S")
       return;
-    const popupVisible = !!document.querySelector(".zhongwen-popup");
+    const popupVisible = !!activeDocument.querySelector(".zhongwen-popup");
     const entry = getCurrentEntry();
     if (!popupVisible || !entry)
       return;
@@ -787,7 +782,7 @@ var ZhongwenVaultPlugin = class extends import_obsidian.Plugin {
       return;
     e.preventDefault();
     e.stopPropagation();
-    this.saveWord(entry);
+    void this.saveWord(entry);
   }
   async saveWord(entry) {
     var _a;
@@ -866,7 +861,7 @@ var ZhongwenVaultSettingTab = class extends import_obsidian.PluginSettingTab {
       })
     );
     new import_obsidian.Setting(containerEl).setName("Hover delay (ms)").setDesc("How long to hover before the popup appears (editor view).").addSlider(
-      (s) => s.setLimits(100, 800, 50).setValue(this.plugin.settings.hoverDelayMs).setDynamicTooltip().onChange(async (v) => {
+      (s) => s.setLimits(100, 800, 50).setValue(this.plugin.settings.hoverDelayMs).onChange(async (v) => {
         this.plugin.settings.hoverDelayMs = v;
         await this.plugin.saveSettings();
         this.plugin.refreshEditorExtension();

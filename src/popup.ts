@@ -101,7 +101,7 @@ interface Classifier {
 function parseClassifiers(s: string): Classifier[] {
     const out: Classifier[] = [];
     for (const part of s.split(",")) {
-        const m = part.trim().match(/^([^\[]+)\[([^\]]+)\]$/);
+        const m = part.trim().match(/^([^[]+)\[([^\]]+)\]$/);
         if (!m) continue;
         // Prefer the simplified form (after "|") when both are given.
         const forms = m[1].split("|");
@@ -220,19 +220,15 @@ let highlightEl: HTMLElement | null = null;
  */
 export function showHighlight(rects: DOMRectList | DOMRect[]): void {
     if (!highlightEl) {
-        highlightEl = document.createElement("div");
+        highlightEl = activeDocument.createElement("div");
         highlightEl.className = "zhongwen-highlight";
-        document.body.appendChild(highlightEl);
-        // hold child boxes for multi-rect (wrapped) ranges
+        activeDocument.body.appendChild(highlightEl);
     }
     highlightEl.empty();
     for (let i = 0; i < rects.length; i++) {
         const r = rects[i];
         const box = highlightEl.createDiv({ cls: "zhongwen-highlight-box" });
-        box.style.left = `${r.left}px`;
-        box.style.top = `${r.top}px`;
-        box.style.width = `${r.width}px`;
-        box.style.height = `${r.height}px`;
+        box.setCssStyles({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
     }
 }
 
@@ -282,9 +278,8 @@ export function showPopupAt(
     destroyPopup();
 
     const dom = renderPopupDom(entries, opts);
-    dom.style.position = "fixed";
-    dom.style.visibility = "hidden";
-    document.body.appendChild(dom);
+    dom.setCssStyles({ position: "fixed", visibility: "hidden" });
+    activeDocument.body.appendChild(dom);
 
     // Measure then position with flip + viewport clamp.
     const rect = dom.getBoundingClientRect();
@@ -299,9 +294,7 @@ export function showPopupAt(
     left = Math.max(4, Math.min(left, vw - rect.width - 4));
     top = Math.max(4, Math.min(top, vh - rect.height - 4));
 
-    dom.style.left = `${left}px`;
-    dom.style.top = `${top}px`;
-    dom.style.visibility = "visible";
+    dom.setCssStyles({ left: `${left}px`, top: `${top}px`, visibility: "visible" });
 
     currentPopup = dom;
     currentEntry = entries[0];
@@ -317,13 +310,13 @@ export function showPopupAt(
     };
     const onScroll = () => destroyPopup();
 
-    document.addEventListener("keydown", onKey, true);
-    document.addEventListener("mousedown", onClick, true);
+    activeDocument.addEventListener("keydown", onKey, true);
+    activeDocument.addEventListener("mousedown", onClick, true);
     window.addEventListener("scroll", onScroll, true);
 
     cleanup = () => {
-        document.removeEventListener("keydown", onKey, true);
-        document.removeEventListener("mousedown", onClick, true);
+        activeDocument.removeEventListener("keydown", onKey, true);
+        activeDocument.removeEventListener("mousedown", onClick, true);
         window.removeEventListener("scroll", onScroll, true);
     };
 }
@@ -332,10 +325,10 @@ export function showPopupAt(
 export function showSaveFeedback(): void {
     const popup =
         currentPopup ??
-        (document.querySelector(".zhongwen-popup") as HTMLElement | null);
+        activeDocument.querySelector<HTMLElement>(".zhongwen-popup");
     if (!popup) return;
 
-    let badge = popup.querySelector(".zhongwen-popup-saved") as HTMLElement | null;
+    let badge = popup.querySelector<HTMLElement>(".zhongwen-popup-saved");
     if (!badge) {
         badge = popup.createDiv({ cls: "zhongwen-popup-saved", text: "Saved ✓" });
     }

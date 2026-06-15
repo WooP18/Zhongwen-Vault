@@ -1,9 +1,5 @@
 /*
  Zhongwen Vault — plugin entry point.
-
- Loads the bundled CC-CEDICT data from the plugin folder at runtime (keeping
- main.js small), wires up the editor (CM6) + reading-view integrations, the
- save-to-vault shortcut, and the settings tab.
 */
 
 import {
@@ -15,6 +11,8 @@ import {
     TFile,
     normalizePath,
 } from "obsidian";
+import dictText from "./data/cedict_ts.u8";
+import idxText from "./data/cedict.idx";
 import { Extension } from "@codemirror/state";
 
 import { ZhongwenDictionary, DictEntry } from "./src/dictionary";
@@ -56,11 +54,7 @@ export default class ZhongwenVaultPlugin extends Plugin {
     async onload() {
         await this.loadSettings();
 
-        // Load dictionary asynchronously; hovers no-op until ready.
-        this.loadDictionary().catch((e) => {
-            console.error("Zhongwen Vault: failed to load dictionary", e);
-            new Notice("Zhongwen Vault: failed to load dictionary (see console)");
-        });
+        this.loadDictionary();
 
         const provider: ZhongwenProvider = {
             getDict: () => (this.settings.enableInEditor ? this.dict : null),
@@ -98,17 +92,7 @@ export default class ZhongwenVaultPlugin extends Plugin {
         };
     }
 
-    /** Read cedict_ts.u8 + cedict.idx from the plugin's own folder. */
-    private async loadDictionary() {
-        const dir = this.manifest.dir;
-        if (!dir) throw new Error("plugin dir unknown");
-        const adapter = this.app.vault.adapter;
-        const dictText = await adapter.read(
-            normalizePath(`${dir}/data/cedict_ts.u8`)
-        );
-        const idxText = await adapter.read(
-            normalizePath(`${dir}/data/cedict.idx`)
-        );
+    private loadDictionary() {
         this.dict = new ZhongwenDictionary(dictText, idxText);
     }
 

@@ -28,6 +28,10 @@ const ctx = await esbuild.context({
     "@lezer/highlight",
     "@lezer/lr",
   ],
+  loader: {
+    ".u8": "text",
+    ".idx": "text",
+  },
   format: "cjs",
   target: "es2018",
   logLevel: "info",

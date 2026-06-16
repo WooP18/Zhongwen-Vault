@@ -11,7 +11,7 @@ import {
     TFile,
     normalizePath,
 } from "obsidian";
-import dictText from "./data/cedict_ts.u8";
+import dictBytes from "./data/cedict_ts.u8";
 import idxText from "./data/cedict.idx";
 import { Extension } from "@codemirror/state";
 
@@ -93,6 +93,11 @@ export default class ZhongwenVaultPlugin extends Plugin {
     }
 
     private loadDictionary() {
+        // Decode the dict bytes as UTF-8 so CRLF line endings survive — the
+        // cedict.idx offsets were computed against the original CRLF text, so
+        // any line-ending normalization (e.g. esbuild's text loader) would
+        // shift them and break every lookup.
+        const dictText = new TextDecoder("utf-8").decode(dictBytes);
         this.dict = new ZhongwenDictionary(dictText, idxText);
     }
 

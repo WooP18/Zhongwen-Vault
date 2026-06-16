@@ -1,5 +1,6 @@
 declare module "*.u8" {
-    const content: string;
+    // Loaded via esbuild "binary" loader → raw bytes (CRLF preserved).
+    const content: Uint8Array;
     export default content;
 }
 declare module "*.idx" {

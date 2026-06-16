@@ -29,7 +29,9 @@ const ctx = await esbuild.context({
     "@lezer/lr",
   ],
   loader: {
-    ".u8": "text",
+    // .u8 as bytes (NOT text): the text loader normalizes CRLF->LF, which
+    // shifts every byte and breaks the cedict.idx offsets. Decode at runtime.
+    ".u8": "binary",
     ".idx": "text",
   },
   format: "cjs",

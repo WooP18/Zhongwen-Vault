@@ -7,13 +7,12 @@
   - showPopupAt() / destroyPopup(): imperative manager for the reading view,
     which positions a fixed popup near the cursor and handles close events.
 
- All colors come from Obsidian CSS variables (see styles.css). The only
- hardcoded values are the spec-mandated tone-color *fallbacks*, which sit
- inside var(--color-*, fallback) so a theme still wins.
+ All colors live in styles.css (zhongwen-tone1..5 classes use Obsidian CSS
+ variables with fallbacks), so a theme or snippet can override them.
 */
 
 import { DictEntry } from "./dictionary";
-import { toPinyinSyllables, TONE_COLOR_VARS } from "./pinyin";
+import { toPinyinSyllables } from "./pinyin";
 
 export interface PopupOptions {
     showHSKLevel: boolean;
@@ -45,7 +44,6 @@ function appendPinyin(parent: HTMLElement, raw: string, leadingSpace: boolean): 
     syls.forEach((syl, i) => {
         const span = parent.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
         span.setText((leadingSpace || i > 0 ? " " : "") + syl.text);
-        span.setCssStyles({ color: TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)" });
     });
 }
 
@@ -127,7 +125,6 @@ function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOption
     for (const syl of toPinyinSyllables(entry.pinyin)) {
         const span = pinyin.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
         span.setText(syl.text + " ");
-        span.setCssStyles({ color: TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)" });
     }
 
     root.createDiv({ cls: "zhongwen-popup-separator" });
@@ -169,7 +166,6 @@ function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOption
             for (const syl of py) {
                 const span = item.createSpan({ cls: `zhongwen-tone zhongwen-tone${syl.tone}` });
                 span.setText(" " + syl.text);
-                span.setCssStyles({ color: TONE_COLOR_VARS[syl.tone] ?? "var(--text-normal)" });
             }
         });
     }
@@ -180,8 +176,7 @@ function renderEntryBlock(root: HTMLElement, entry: DictEntry, opts: PopupOption
  * readings of 教). Pure DOM — no positioning, no global state.
  */
 export function renderPopupDom(entries: DictEntry[], opts: PopupOptions): HTMLElement {
-    const root = activeDocument.createElement("div");
-    root.className = "zhongwen-popup";
+    const root = createDiv({ cls: "zhongwen-popup" });
 
     entries.forEach((entry, i) => {
         if (i > 0) {
@@ -218,11 +213,10 @@ let highlightEl: HTMLElement | null = null;
  * Highlight the matched characters by overlaying a themed box at `rects`
  * (client coords). Reuses one element across moves to avoid flicker.
  */
-export function showHighlight(rects: DOMRectList | DOMRect[]): void {
+export function showHighlight(rects: DOMRectList | DOMRect[], doc: Document = activeDocument): void {
+    if (highlightEl && highlightEl.ownerDocument !== doc) hideHighlight();
     if (!highlightEl) {
-        highlightEl = activeDocument.createElement("div");
-        highlightEl.className = "zhongwen-highlight";
-        activeDocument.body.appendChild(highlightEl);
+        highlightEl = doc.body.createDiv({ cls: "zhongwen-highlight" });
     }
     highlightEl.empty();
     for (let i = 0; i < rects.length; i++) {
@@ -273,20 +267,21 @@ export function showPopupAt(
     entries: DictEntry[],
     x: number,
     y: number,
-    opts: PopupOptions
+    opts: PopupOptions,
+    doc: Document = activeDocument
 ): void {
     destroyPopup();
 
+    // `doc` is the document of the hovered text, so in a popout window the
+    // popup opens (and is measured) in that window even if focus is elsewhere.
     const dom = renderPopupDom(entries, opts);
     dom.setCssStyles({ position: "fixed", visibility: "hidden" });
-    activeDocument.body.appendChild(dom);
+    doc.body.appendChild(dom);
 
     // Measure then position with flip + viewport clamp.
-    // Use activeWindow (not window) so the popout window's viewport is used —
-    // matches activeDocument.body above, else popup mis-positions in popouts.
     const rect = dom.getBoundingClientRect();
     const margin = 12;
-    const win = activeDocument.defaultView ?? window;
+    const win = doc.win;
     const vw = win.innerWidth;
     const vh = win.innerHeight;
 
@@ -313,19 +308,21 @@ export function showPopupAt(
     };
     const onScroll = () => destroyPopup();
 
-    activeDocument.addEventListener("keydown", onKey, true);
-    activeDocument.addEventListener("mousedown", onClick, true);
+    // Same `doc` for add and remove, so no listener is left behind if focus
+    // moves to another window in between.
+    doc.addEventListener("keydown", onKey, true);
+    doc.addEventListener("mousedown", onClick, true);
     win.addEventListener("scroll", onScroll, true);
 
     cleanup = () => {
-        activeDocument.removeEventListener("keydown", onKey, true);
-        activeDocument.removeEventListener("mousedown", onClick, true);
+        doc.removeEventListener("keydown", onKey, true);
+        doc.removeEventListener("mousedown", onClick, true);
         win.removeEventListener("scroll", onScroll, true);
     };
 }
 
-/** Flash a "Saved ✓" confirmation inside whichever popup is visible. */
-export function showSaveFeedback(): void {
+/** Flash a confirmation ("Saved ✓" by default) inside the visible popup. */
+export function showSaveFeedback(message = "Saved ✓"): void {
     const popup =
         currentPopup ??
         activeDocument.querySelector<HTMLElement>(".zhongwen-popup");
@@ -333,10 +330,11 @@ export function showSaveFeedback(): void {
 
     let badge = popup.querySelector<HTMLElement>(".zhongwen-popup-saved");
     if (!badge) {
-        badge = popup.createDiv({ cls: "zhongwen-popup-saved", text: "Saved ✓" });
+        badge = popup.createDiv({ cls: "zhongwen-popup-saved" });
     }
+    badge.setText(message);
     badge.classList.add("zhongwen-popup-saved-show");
-    window.setTimeout(() => {
+    popup.win.setTimeout(() => {
         badge?.classList.remove("zhongwen-popup-saved-show");
     }, 800);
 }

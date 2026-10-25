@@ -1,4 +1,7 @@
 node_modules/
+
+# Build output: built and attached to each GitHub release by CI
+main.js
 *.js.map
 
 # Claude Code local files

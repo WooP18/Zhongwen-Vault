@@ -18,8 +18,20 @@ import {
 } from "@codemirror/view";
 import { StateField, StateEffect, Extension } from "@codemirror/state";
 import { ZhongwenDictionary } from "./dictionary";
-import { segmentAtPos } from "./segmenter";
+import { segmentAtPos, MAX_WORD_LEN, Segment } from "./segmenter";
 import { renderPopupDom, setCurrentEntry, PopupOptions } from "./popup";
+
+/**
+ * Segment the word at `pos` reading only the few characters a word can span,
+ * not the whole note (this runs on every mouse move over Chinese text).
+ * Returns start/end as document positions.
+ */
+function segmentInDoc(dict: ZhongwenDictionary, view: EditorView, pos: number): Segment | null {
+    const text = view.state.doc.sliceString(pos, pos + MAX_WORD_LEN);
+    const seg = segmentAtPos(dict, text, 0);
+    if (!seg) return null;
+    return { ...seg, start: pos + seg.start, end: pos + seg.end };
+}
 
 /** Provider gives the extension live access to the loaded dict + settings. */
 export interface ZhongwenProvider {
@@ -76,13 +88,7 @@ function highlightPlugin(provider: ZhongwenProvider) {
                 const pos = this.view.posAtCoords({ x: e.clientX, y: e.clientY });
                 if (pos == null) return this.clear();
 
-                // Quick char-code check before paying for full doc serialization.
-                // 0x25cb (○) is below 0x3400 but is a valid char (see isChineseChar).
-                const charCode = this.view.state.doc.sliceString(pos, pos + 1).charCodeAt(0);
-                if (isNaN(charCode) || (charCode < 0x3400 && charCode !== 0x25cb)) return this.clear();
-
-                const doc = this.view.state.doc.toString();
-                const seg = segmentAtPos(dict, doc, pos);
+                const seg = segmentInDoc(dict, this.view, pos);
                 if (!seg) return this.clear();
 
                 const key = `${seg.start}:${seg.end}`;
@@ -113,13 +119,7 @@ function hoverExtension(provider: ZhongwenProvider) {
             const dict = provider.getDict();
             if (!dict) return null;
 
-            // Cheap check before full serialization. 0x25cb (○) is below 0x3400
-            // but valid (see isChineseChar).
-            const charCode = view.state.doc.sliceString(pos, pos + 1).charCodeAt(0);
-            if (isNaN(charCode) || (charCode < 0x3400 && charCode !== 0x25cb)) return null;
-
-            const doc = view.state.doc.toString();
-            const seg = segmentAtPos(dict, doc, pos);
+            const seg = segmentInDoc(dict, view, pos);
             if (!seg) return null;
 
             return {
@@ -138,7 +138,9 @@ function hoverExtension(provider: ZhongwenProvider) {
                 },
             };
         },
-        { hoverTime: provider.getHoverDelay() }
+        // hideOnChange: typing closes the popup, so "S" only saves while the
+        // user is hovering, never while they are writing.
+        { hoverTime: provider.getHoverDelay(), hideOnChange: true }
     );
 }
 

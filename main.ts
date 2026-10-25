@@ -75,8 +75,26 @@ export default class ZhongwenVaultPlugin extends Plugin {
             })
         );
 
-        // Global "S" to save the word in the currently visible popup.
-        this.registerDomEvent(activeDocument, "keydown", (e) => this.onKeyDown(e), true);
+        // "S" saves the word in the visible popup, in the main window and in
+        // every popout window.
+        this.registerDomEvent(document, "keydown", (e) => this.onKeyDown(e), true);
+        this.registerEvent(
+            this.app.workspace.on("window-open", (_win, win) => {
+                this.registerDomEvent(win.document, "keydown", (e) => this.onKeyDown(e), true);
+            })
+        );
+
+        // Same action as a command, so it can be bound to any hotkey.
+        this.addCommand({
+            id: "save-popup-word",
+            name: "Save word from popup",
+            checkCallback: (checking) => {
+                const entry = this.visiblePopupEntry();
+                if (!entry) return false;
+                if (!checking) void this.saveWord(entry);
+                return true;
+            },
+        });
 
         this.addSettingTab(new ZhongwenVaultSettingTab(this.app, this));
     }
@@ -99,14 +117,24 @@ export default class ZhongwenVaultPlugin extends Plugin {
         this.dict = new ZhongwenDictionary(dictText, idxText);
     }
 
+    /** Entry of the popup currently on screen, or null if none is shown. */
+    private visiblePopupEntry(): DictEntry | null {
+        const entry = getCurrentEntry();
+        if (!entry || !activeDocument.querySelector(".zhongwen-popup")) return null;
+        return entry;
+    }
+
     private onKeyDown(e: KeyboardEvent) {
         if (e.key !== "s" && e.key !== "S") return;
-        // Only act when a popup is actually on screen.
-        const popupVisible = !!activeDocument.querySelector(".zhongwen-popup");
-        const entry = getCurrentEntry();
-        if (!popupVisible || !entry) return;
         // Don't steal modified shortcuts (Ctrl/Cmd+S = save file).
         if (e.ctrlKey || e.metaKey || e.altKey) return;
+        // Never swallow "s" typed into a text field (search, rename, settings).
+        // The editor needs no check: its popup closes on any edit, so a visible
+        // editor popup means the user is hovering, not typing.
+        const target = e.target as HTMLElement | null;
+        if (target?.closest?.("input, textarea")) return;
+        const entry = this.visiblePopupEntry();
+        if (!entry) return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -119,14 +147,28 @@ export default class ZhongwenVaultPlugin extends Plugin {
         const realDef = entry.definitions.find((d) => !d.startsWith("CL:")) ?? "";
         // Convert numeric pinyin to tone marks for readability.
         const py = toPinyinText(entry.pinyin);
-        const line = `- **${entry.simplified}** (${py}) — ${realDef}`;
+        const headword = `- **${entry.simplified}** (${py})`;
+        const line = `${headword} — ${realDef}`;
 
         try {
             const existing = this.app.vault.getAbstractFileByPath(path);
             if (existing instanceof TFile) {
-                const content = await this.app.vault.read(existing);
-                const sep = content.endsWith("\n") ? "" : "\n";
-                await this.app.vault.modify(existing, content + sep + line + "\n");
+                let added = false;
+                // vault.process is an atomic read-modify-write: edits made to
+                // the note in between are never overwritten.
+                await this.app.vault.process(existing, (content) => {
+                    // Same word and reading already listed: leave the note as is.
+                    if (content.split("\n").some((l) => l.startsWith(headword + " "))) {
+                        return content;
+                    }
+                    added = true;
+                    const sep = content === "" || content.endsWith("\n") ? "" : "\n";
+                    return content + sep + line + "\n";
+                });
+                if (!added) {
+                    showSaveFeedback("Already saved");
+                    return;
+                }
             } else {
                 // Ensure parent folders exist.
                 const folder = path.contains("/")
@@ -195,8 +237,8 @@ class ZhongwenVaultSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName("Show meta row")
-            .setDesc("Show character count under definitions. (HSK dataset is not bundled — see README.)")
+            .setName("Show character count")
+            .setDesc("Show the number of characters under the definitions.")
             .addToggle((t) =>
                 t
                     .setValue(this.plugin.settings.showHSKLevel)

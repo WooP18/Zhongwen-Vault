@@ -12,7 +12,7 @@
 import { ZhongwenDictionary, DictEntry } from "./dictionary";
 
 /** Max characters Zhongwen ever considers for a single word. */
-const MAX_WORD_LEN = 7;
+export const MAX_WORD_LEN = 7;
 
 /**
  * True if `cp` (a code point) is a CJK character Zhongwen treats as text.

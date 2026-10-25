@@ -15,19 +15,6 @@ const COMBINING: Record<number, string> = {
     5: "",
 };
 
-/**
- * Tone -> CSS custom property + fallback color. The popup uses the var()
- * with the hardcoded value only as a fallback, so themes can override.
- * (Spec-mandated mapping; tone 5 uses --text-muted.)
- */
-export const TONE_COLOR_VARS: Record<number, string> = {
-    1: "var(--color-red, #d93025)",
-    2: "var(--color-orange, #e8711a)",
-    3: "var(--color-green, #1a7f37)",
-    4: "var(--color-blue, #1a56db)",
-    5: "var(--text-muted)",
-};
-
 /** Split a numeric-pinyin syllable into [pre, vowels, post, tone]. */
 function parseSyllable(s: string): RegExpMatchArray | null {
     return s.match(/([^AEIOU:aeiou]*)([AEIOUaeiou:]+)([^aeiou:]*)([1-5])/);

@@ -64,7 +64,7 @@ export function makeReadingProcessor(provider: ReadingProvider) {
             if (!CHINESE_RUN.test(text)) continue;
             CHINESE_RUN.lastIndex = 0;
 
-            const frag = ownerDoc.createDocumentFragment();
+            const frag = createFragment();
             let lastIndex = 0;
             let match: RegExpExecArray | null;
 
@@ -74,9 +74,7 @@ export function makeReadingProcessor(provider: ReadingProvider) {
                         ownerDoc.createTextNode(text.slice(lastIndex, match.index))
                     );
                 }
-                const span = ownerDoc.createElement("span");
-                span.className = "zhongwen-hoverable";
-                span.textContent = match[0];
+                const span = createSpan({ cls: "zhongwen-hoverable", text: match[0] });
                 attachHover(span, provider, panelState);
                 frag.appendChild(span);
                 lastIndex = CHINESE_RUN.lastIndex;
@@ -121,7 +119,7 @@ function attachHover(
         panelState.activeKey = key;
 
         // Popup first (it tears down any previous popup + highlight)...
-        showPopupAt(seg.entries, e.clientX, e.clientY, provider.getOptions());
+        showPopupAt(seg.entries, e.clientX, e.clientY, provider.getOptions(), span.ownerDocument);
 
         // ...then highlight just the matched characters via a Range over the run.
         if (inner) {
@@ -129,7 +127,7 @@ function attachHover(
                 const range = span.ownerDocument.createRange();
                 range.setStart(inner, seg.start);
                 range.setEnd(inner, Math.min(seg.end, runText.length));
-                showHighlight(range.getClientRects());
+                showHighlight(range.getClientRects(), span.ownerDocument);
             } catch {
                 /* ignore range errors */
             }

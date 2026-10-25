@@ -6,24 +6,23 @@
 
 🀄 Instant Chinese definitions and pinyin, right where you read.
 
-Hover over any Chinese text to get pinyin, tone colors, and English definitions in a clean pop-up | no tab switching, no interruptions.
+Hover over any Chinese text to get pinyin, tone colors, and English definitions in a clean popup: no tab switching, no interruptions.
 
 What you get:
 
-- 🔤 Simplified & traditional character support
+- 🔤 Simplified and traditional characters (optionally show both)
 - 🎨 Hanyu Pinyin with color-coded tones for faster memorization
-- ⌨️ Keyboard navigation — move word by word or character by character
-- 🔛 One-click toggle to enable/disable anytime
-- 🔡 Optional Zhuyin (Bopomofo) display
+- 📝 Works in the editor (Live Preview and Source mode) and in Reading view
+- 📏 Measure words and cross-references shown with their pinyin
+- 📚 Powered by CC-CEDICT, a trusted open-source Chinese-English dictionary, bundled with the plugin: no internet connection needed
 
 Built for learners: 🎓
 
-- Save words to a built-in list and export directly to Anki
-- Grammar links via the Chinese Grammar Wiki
-- Skritter integration for vocabulary export
-- Powered by CC-CEDICT, a trusted open-source Chinese-English dictionary
+- Press **S** while a popup is open to save the word (with pinyin and its first meaning) to a word list note in your vault. The note is created if needed and a word is never added twice.
+- Prefer another key? Use the **Save word from popup** command and assign it any hotkey in Settings → Hotkeys.
+- Settings: word list note path, hover delay, traditional characters, character count, and on/off switches for the editor and Reading view.
 
-Click the PinyinPop icon to activate. Hover. Learn. 🚀
+Hover. Learn. 🚀
 
 ## Credits
 

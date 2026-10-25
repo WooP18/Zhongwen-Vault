@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.7
+
+- **Fix: typing "s" in the editor no longer gets swallowed.** The editor popup
+  now closes as soon as you type, and "S" is ignored in text fields (search,
+  rename, settings). "S" also works in popout windows now.
+- New command **Save word from popup**, so the save action can be bound to any
+  hotkey.
+- Saving a word that is already in the list no longer adds a duplicate
+  ("Already saved" is shown instead). The note is updated atomically.
+- Faster hover in long notes: the editor reads only the characters under the
+  cursor instead of the whole note on every mouse move.
+- Reading view popup opens in the right place in popout windows.
+- Tone colors come only from `styles.css`, so themes and CSS snippets can
+  restyle them.
+- Setting "Show meta row" renamed to "Show character count" (same setting).
+- README now lists only features the plugin actually has.
+- Build: esbuild 0.28, pinned Obsidian API typings, `versions.json` added,
+  `main.js` no longer tracked in git (CI builds it for each release).
+
 ## 1.0.6
 
 - **Renamed to PinyinPop.** Only the display name changes; the plugin id stays

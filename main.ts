@@ -8,14 +8,15 @@ import {
     Plugin,
     PluginSettingTab,
     Setting,
+    SettingDefinition,
     TFile,
     normalizePath,
 } from "obsidian";
-import dictText from "./data/cedict_ts.u8";
-import idxText from "./data/cedict.idx";
+import packedCedict from "cedict:packed";
 import { Extension } from "@codemirror/state";
 
 import { ZhongwenDictionary, DictEntry } from "./src/dictionary";
+import { unpackCedict } from "./src/cedict";
 import { toPinyinText } from "./src/pinyin";
 import { zhongwenEditorExtension, ZhongwenProvider } from "./src/editor-extension";
 import { makeReadingProcessor } from "./src/reading-view";
@@ -111,10 +112,12 @@ export default class ZhongwenVaultPlugin extends Plugin {
     }
 
     private loadDictionary() {
-        // dictText keeps its CRLF line endings (see esbuild.config.mjs): the
-        // cedict.idx offsets were computed against the original CRLF text, so
-        // any line-ending normalization would shift them and break lookups.
-        this.dict = new ZhongwenDictionary(dictText, idxText);
+        // Unpacking takes a moment, so wait until the workspace is ready
+        // instead of slowing down Obsidian's startup. Until then this.dict is
+        // null and no popup is shown.
+        this.app.workspace.onLayoutReady(() => {
+            this.dict = unpackCedict(packedCedict);
+        });
     }
 
     /** Entry of the popup currently on screen, or null if none is shown. */
@@ -210,6 +213,8 @@ export default class ZhongwenVaultPlugin extends Plugin {
     }
 }
 
+type SettingKey = keyof ZhongwenVaultSettings;
+
 class ZhongwenVaultSettingTab extends PluginSettingTab {
     plugin: ZhongwenVaultPlugin;
 
@@ -218,84 +223,91 @@ class ZhongwenVaultSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    /**
+     * Declarative settings (Obsidian 1.13+): Obsidian renders them and lists
+     * them in its settings search. Older versions use display() below.
+     */
+    getSettingDefinitions(): SettingDefinition<SettingKey>[] {
+        return [
+            {
+                name: "Word list note path",
+                desc: 'Note where saved words are appended (no ".md"). Folders are created if missing.',
+                control: { type: "text", key: "wordListNote", placeholder: DEFAULT_SETTINGS.wordListNote },
+            },
+            {
+                name: "Show character count",
+                desc: "Show the number of characters under the definitions.",
+                control: { type: "toggle", key: "showHSKLevel" },
+            },
+            {
+                name: "Show traditional character",
+                desc: "Show the traditional form next to the simplified form when they differ.",
+                control: { type: "toggle", key: "showTraditional" },
+            },
+            {
+                name: "Hover delay (ms)",
+                desc: "How long to hover before the popup appears (editor view).",
+                control: { type: "slider", key: "hoverDelayMs", min: 100, max: 800, step: 50 },
+            },
+            {
+                name: "Enable in editor",
+                desc: "Show the popup while editing (Live Preview / Source mode).",
+                control: { type: "toggle", key: "enableInEditor" },
+            },
+            {
+                name: "Enable in reading view",
+                desc: "Show the popup in rendered (reading) view.",
+                control: { type: "toggle", key: "enableInReadingView" },
+            },
+        ];
+    }
+
+    getControlValue(key: string): unknown {
+        return this.plugin.settings[key as SettingKey];
+    }
+
+    async setControlValue(key: string, value: unknown): Promise<void> {
+        const settings = this.plugin.settings as unknown as Record<string, unknown>;
+        settings[key] =
+            key === "wordListNote"
+                ? String(value).trim() || DEFAULT_SETTINGS.wordListNote
+                : value;
+        await this.plugin.saveSettings();
+        if (key === "hoverDelayMs") this.plugin.refreshEditorExtension();
+    }
+
+    /**
+     * Fallback for Obsidian < 1.13, which never calls getSettingDefinitions():
+     * renders the same definitions imperatively. Newer versions skip display()
+     * because getSettingDefinitions() returns a non-empty list.
+     */
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
 
-        new Setting(containerEl)
-            .setName("Word list note path")
-            .setDesc('Note where saved words are appended (no ".md"). Folders are created if missing.')
-            .addText((text) =>
-                text
-                    .setPlaceholder("Chinese/Word List")
-                    .setValue(this.plugin.settings.wordListNote)
-                    .onChange(async (value) => {
-                        this.plugin.settings.wordListNote =
-                            value.trim() || DEFAULT_SETTINGS.wordListNote;
-                        await this.plugin.saveSettings();
-                    })
-            );
+        for (const def of this.getSettingDefinitions()) {
+            const control = "control" in def ? def.control : undefined;
+            if (!control) continue;
+            const setting = new Setting(containerEl).setName(def.name);
+            if (typeof def.desc === "string") setting.setDesc(def.desc);
+            const value = this.getControlValue(control.key);
+            const save = (v: unknown) => void this.setControlValue(control.key, v);
 
-        new Setting(containerEl)
-            .setName("Show character count")
-            .setDesc("Show the number of characters under the definitions.")
-            .addToggle((t) =>
-                t
-                    .setValue(this.plugin.settings.showHSKLevel)
-                    .onChange(async (v) => {
-                        this.plugin.settings.showHSKLevel = v;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName("Show traditional character")
-            .setDesc("Show the traditional form next to the simplified form when they differ.")
-            .addToggle((t) =>
-                t
-                    .setValue(this.plugin.settings.showTraditional)
-                    .onChange(async (v) => {
-                        this.plugin.settings.showTraditional = v;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName("Hover delay (ms)")
-            .setDesc("How long to hover before the popup appears (editor view).")
-            .addSlider((s) =>
-                s
-                    .setLimits(100, 800, 50)
-                    .setValue(this.plugin.settings.hoverDelayMs)
-                    .onChange(async (v) => {
-                        this.plugin.settings.hoverDelayMs = v;
-                        await this.plugin.saveSettings();
-                        this.plugin.refreshEditorExtension();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName("Enable in editor")
-            .setDesc("Show the popup while editing (Live Preview / Source mode).")
-            .addToggle((t) =>
-                t
-                    .setValue(this.plugin.settings.enableInEditor)
-                    .onChange(async (v) => {
-                        this.plugin.settings.enableInEditor = v;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName("Enable in reading view")
-            .setDesc("Show the popup in rendered (reading) view.")
-            .addToggle((t) =>
-                t
-                    .setValue(this.plugin.settings.enableInReadingView)
-                    .onChange(async (v) => {
-                        this.plugin.settings.enableInReadingView = v;
-                        await this.plugin.saveSettings();
-                    })
-            );
+            switch (control.type) {
+                case "text":
+                    setting.addText((t) =>
+                        t.setPlaceholder(control.placeholder ?? "").setValue(value as string).onChange(save)
+                    );
+                    break;
+                case "toggle":
+                    setting.addToggle((t) => t.setValue(value as boolean).onChange(save));
+                    break;
+                case "slider":
+                    setting.addSlider((s) =>
+                        s.setLimits(control.min, control.max, control.step).setValue(value as number).onChange(save)
+                    );
+                    break;
+            }
+        }
     }
 }

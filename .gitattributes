@@ -1,8 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# CC-CEDICT data: store byte-exact (binary), NO line-ending normalization.
-# cedict.idx holds JS-string offsets into cedict_ts.u8 computed against its
-# original CRLF text; stripping CR shifts every offset and breaks all lookups.
+# CC-CEDICT source: store byte-exact as published by MDBG (no line-ending
+# normalization), so updates diff cleanly against upstream.
 data/cedict_ts.u8 binary
-data/cedict.idx binary

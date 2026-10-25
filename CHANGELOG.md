@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.8
+
+- **main.js is now 4.7 MB instead of 13.3 MB**, under Obsidian Sync's 5 MB
+  per-file limit (Standard plan). The CC-CEDICT dictionary is stored
+  compressed and unpacked once Obsidian has finished loading, so startup is
+  not slowed down. The dictionary content and every lookup are unchanged.
+- Settings now appear in Obsidian's settings search (Obsidian 1.13 and later).
+  Older Obsidian versions keep the same settings page as before.
+- GitHub releases now include these release notes.
+
 ## 1.0.7
 
 - **Fix: typing "s" in the editor no longer gets swallowed.** The editor popup

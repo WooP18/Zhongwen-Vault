@@ -1,9 +1,6 @@
-declare module "*.u8" {
-    // Raw CC-CEDICT text, embedded as a string literal (CRLF preserved).
-    const content: string;
-    export default content;
-}
-declare module "*.idx" {
-    const content: string;
-    export default content;
+declare module "cedict:packed" {
+    // Packed CC-CEDICT generated at build time by the "cedict" esbuild plugin
+    // (esbuild.config.mjs); decoded by unpackCedict() in src/cedict.ts.
+    const packed: string;
+    export default packed;
 }

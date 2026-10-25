@@ -31,9 +31,17 @@ jobs:
             main.js
             styles.css
 
+      # Release description = this version's section of CHANGELOG.md
+      # (from "## <tag>" up to the next "## "). Fails if the entry is missing.
+      - name: Release notes from CHANGELOG
+        run: |
+          awk -v v="$GITHUB_REF_NAME" '$0 == "## " v {f=1; next} /^## / && f {exit} f' CHANGELOG.md > release-notes.md
+          test -s release-notes.md || { echo "No CHANGELOG.md entry for $GITHUB_REF_NAME"; exit 1; }
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
+          body_path: release-notes.md
           files: |
             main.js
             manifest.json

@@ -36,3 +36,5 @@ Zhongwen's source. Huge thanks to Christian for building and open-sourcing it.
 
 Zhongwen itself traces back to Rikaikun / Rikaichan / RikaiXUL. CC-CEDICT
 dictionary by MDBG. This plugin inherits **GPL-2.0** from Zhongwen.
+
+The bundled dictionary is decompressed with [fflate](https://github.com/101arrowz/fflate) (MIT).

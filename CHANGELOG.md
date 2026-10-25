@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.10
+
+- **Reproducible build, completed.** `main.js` contained a comment with the
+  absolute path of the folder it was built in, so a rebuild anywhere else
+  (such as Obsidian's build verification) could never match the release.
+  The path is now relative; builds from different folders and machines are
+  byte-identical. No change in behavior.
+
 ## 1.0.9
 
 - **Reproducible build:** the released `main.js` can now be rebuilt from

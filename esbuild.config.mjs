@@ -39,17 +39,22 @@ async function packCedict(path) {
   return Buffer.from(deflateSync(Buffer.from(payload, "utf8"), { level: 9 })).toString("base64");
 }
 
+const CEDICT_FILE = fileURLToPath(new URL("./data/cedict_ts.u8", import.meta.url));
+
 const cedictPlugin = {
   name: "cedict",
   setup(build) {
+    // The resolved path is printed as a comment in main.js, so keep it
+    // relative: an absolute path would differ on every machine and make the
+    // release impossible to reproduce from source.
     build.onResolve({ filter: /^cedict:packed$/ }, () => ({
-      path: fileURLToPath(new URL("./data/cedict_ts.u8", import.meta.url)),
+      path: "data/cedict_ts.u8",
       namespace: "cedict",
     }));
-    build.onLoad({ filter: /.*/, namespace: "cedict" }, async (args) => ({
-      contents: `export default ${JSON.stringify(await packCedict(args.path))};`,
+    build.onLoad({ filter: /.*/, namespace: "cedict" }, async () => ({
+      contents: `export default ${JSON.stringify(await packCedict(CEDICT_FILE))};`,
       loader: "js",
-      watchFiles: [args.path],
+      watchFiles: [CEDICT_FILE],
     }));
   },
 };

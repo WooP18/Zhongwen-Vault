@@ -1,5 +1,5 @@
 /*
- Zhongwen Vault — plugin entry point.
+ PinyinPop — plugin entry point.
 */
 
 import {
@@ -11,7 +11,7 @@ import {
     TFile,
     normalizePath,
 } from "obsidian";
-import dictBytes from "./data/cedict_ts.u8";
+import dictText from "./data/cedict_ts.u8";
 import idxText from "./data/cedict.idx";
 import { Extension } from "@codemirror/state";
 
@@ -93,11 +93,9 @@ export default class ZhongwenVaultPlugin extends Plugin {
     }
 
     private loadDictionary() {
-        // Decode the dict bytes as UTF-8 so CRLF line endings survive — the
+        // dictText keeps its CRLF line endings (see esbuild.config.mjs): the
         // cedict.idx offsets were computed against the original CRLF text, so
-        // any line-ending normalization (e.g. esbuild's text loader) would
-        // shift them and break every lookup.
-        const dictText = new TextDecoder("utf-8").decode(dictBytes);
+        // any line-ending normalization would shift them and break lookups.
         this.dict = new ZhongwenDictionary(dictText, idxText);
     }
 
@@ -144,8 +142,8 @@ export default class ZhongwenVaultPlugin extends Plugin {
             }
             showSaveFeedback();
         } catch (err) {
-            console.error("Zhongwen Vault: save failed", err);
-            new Notice("Zhongwen Vault: failed to save word (see console)");
+            console.error("PinyinPop: save failed", err);
+            new Notice("PinyinPop: failed to save word (see console)");
         }
     }
 

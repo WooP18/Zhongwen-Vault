@@ -1,4 +1,4 @@
-# Zhongwen Vault — Chinese Popup Dictionary for Obsidian
+# PinyinPop — Chinese Popup Dictionary for Obsidian
 
 **Made by [WooP18](https://github.com/WooP18)**
 

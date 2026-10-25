@@ -1,6 +1,6 @@
 declare module "*.u8" {
-    // Loaded via esbuild "binary" loader → raw bytes (CRLF preserved).
-    const content: Uint8Array;
+    // Raw CC-CEDICT text, embedded as a string literal (CRLF preserved).
+    const content: string;
     export default content;
 }
 declare module "*.idx" {

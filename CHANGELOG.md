@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.9
+
+- **Reproducible build:** the released `main.js` can now be rebuilt from
+  source byte for byte. The dictionary is compressed at build time with fflate
+  (pure JavaScript) instead of Node's zlib, whose output varies from machine
+  to machine. Dependency versions are pinned exactly in `package.json`.
+- fflate updated to 0.8.3 (security advisory; the plugin never used the
+  affected ZIP code, it only decompresses its own bundled data).
+- No change in behavior: every dictionary lookup gives the same result.
+
 ## 1.0.8
 
 - **main.js is now 4.7 MB instead of 13.3 MB**, under Obsidian Sync's 5 MB

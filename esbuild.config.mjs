@@ -1,7 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import { readFile } from "fs/promises";
-import { deflateRawSync } from "zlib";
+import { deflateSync } from "fflate";
 import { fileURLToPath } from "url";
 
 const prod = process.argv[2] === "production";
@@ -16,7 +16,9 @@ Source: https://github.com/cschiller/zhongwen (ported to Obsidian)
 //   - entries are split into four columns (traditional, or "" when equal to
 //     simplified / simplified / pinyin / definitions), "\n" between entries
 //     and "\0" between columns, which compresses far better than whole lines;
-//   - the result is raw-deflated and base64-encoded.
+//   - the result is raw-deflated and base64-encoded. Compression uses fflate
+//     (pure JS), not Node's zlib: zlib output varies with the machine and Node
+//     version, which would make main.js impossible to reproduce from source.
 // No index is shipped: src/cedict.ts rebuilds it at startup.
 // Unpacked by unpackCedict() in src/cedict.ts; keep both sides in sync.
 const CEDICT_LINE = /^(\S+) (\S+) \[(.*?)\] \/(.*)\/$/;
@@ -34,7 +36,7 @@ async function packCedict(path) {
     cols[3].push(defs);
   }
   const payload = cols.map((c) => c.join("\n")).join("\0");
-  return deflateRawSync(Buffer.from(payload, "utf8"), { level: 9 }).toString("base64");
+  return Buffer.from(deflateSync(Buffer.from(payload, "utf8"), { level: 9 })).toString("base64");
 }
 
 const cedictPlugin = {

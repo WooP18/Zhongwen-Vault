@@ -1,6 +1,6 @@
 {
   "name": "zhongwen-vault",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Chinese popup dictionary for Obsidian, inspired by the Zhongwen browser extension.",
   "main": "main.js",
   "scripts": {
@@ -17,14 +17,14 @@
   "author": "Personal",
   "license": "GPL-2.0",
   "devDependencies": {
-    "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.15",
-    "@types/node": "^20.0.0",
-    "esbuild": "^0.28.2",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.15",
+    "@types/node": "20.19.43",
+    "esbuild": "0.28.2",
     "obsidian": "1.14.4",
-    "typescript": "^5.0.0"
+    "typescript": "5.9.3"
   },
   "dependencies": {
-    "fflate": "0.8.2"
+    "fflate": "0.8.3"
   }
 }
